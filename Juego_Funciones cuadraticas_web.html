@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conversión de Rugby — Funciones Cuadráticas</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=DM+Sans:wght@400;500&family=DM+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f4f0e8; --surface:#eae5d8; --card:#fff;
+  --dark:#1a1410; --muted:#8a8070; --border:#d4cfc2;
+  --green:#1d9e75; --red:#d85a30; --blue:#185fa5; --accent:#f5a623;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--dark);font-family:'DM Sans',sans-serif;padding:14px;max-width:780px;margin:0 auto;}
+
+/* SCOREBAR */
+.scorebar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+.score-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:7px 12px;text-align:center;flex:1;min-width:60px;}
+.score-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;}
+.score-val{font-size:20px;font-weight:500;}
+.score-val.green{color:var(--green);}
+.score-val.red{color:var(--red);}
+.diff-badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;margin-left:6px;vertical-align:middle;}
+.diff-easy{background:#eaf3de;color:#3b6d11;}
+.diff-med{background:#faeeda;color:#854f0b;}
+.diff-hard{background:#fcebeb;color:#a32d2d;}
+
+/* CHALLENGE BOX */
+.challenge-box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px;}
+.ch-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px;}
+.ch-type{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;padding:3px 10px;border-radius:20px;}
+.type-a{background:#e6f1fb;color:#185fa5;}
+.type-b{background:#faeeda;color:#854f0b;}
+.type-c{background:#eaf3de;color:#3b6d11;}
+.type-inv{background:#f3edfb;color:#5a2d9e;}
+.ch-prog{font-size:12px;color:var(--muted);}
+.ch-data{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+.ch-datum{background:var(--surface);border-radius:8px;padding:5px 12px;font-size:13px;}
+.ch-datum strong{font-weight:500;}
+.ch-datum.unknown{border:1.5px dashed var(--border);color:var(--muted);}
+.ch-question{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:8px;}
+.ch-formula{font-family:'DM Mono',monospace;font-size:12px;background:var(--surface);border-radius:8px;padding:7px 12px;color:var(--dark);}
+
+/* CONTROLS */
+.controls-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+.ctrl-block{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;flex:1;min-width:130px;}
+.ctrl-block.locked{opacity:.38;pointer-events:none;}
+.ctrl-label{font-size:11px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;}
+.ctrl-label span{font-weight:500;font-size:13px;color:var(--dark);}
+input[type=range]{width:100%;accent-color:var(--dark);}
+
+/* CANVAS */
+.cw{border-radius:12px;border:1px solid var(--border);overflow:hidden;margin-bottom:10px;background:#c9e8f5;position:relative;}
+canvas{display:block;width:100%;}
+#confetti-canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
+
+/* VERDICT */
+.verdict{border-radius:10px;padding:11px 16px;font-size:14px;font-weight:500;margin-bottom:10px;display:none;}
+.verdict.goal{background:#eaf3de;color:#3b6d11;}
+.verdict.miss{background:#fcebeb;color:#a32d2d;}
+.verdict-detail{font-size:12px;font-weight:400;margin-top:4px;opacity:.85;}
+
+/* VERIFICACION */
+.verif-box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px;display:none;}
+.verif-title{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:10px;}
+.verif-step{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;font-size:13px;line-height:1.6;}
+.verif-num{background:var(--dark);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0;margin-top:2px;}
+.verif-math{font-family:'DM Mono',monospace;font-size:12px;background:var(--surface);border-radius:6px;padding:4px 8px;margin-top:4px;display:inline-block;}
+
+/* BUTTONS */
+.btn-row{display:flex;gap:8px;margin-bottom:12px;}
+.kb{flex:1;padding:10px;font-size:14px;font-weight:500;border-radius:10px;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--dark);transition:background .15s;}
+.kb:hover{background:var(--surface);}
+.kb:active{transform:scale(.98);}
+.kb.primary{background:var(--dark);color:var(--accent);border-color:var(--dark);}
+.kb.primary:hover{background:#2a2520;}
+.kb.secondary{font-size:13px;flex:0 0 auto;padding:10px 16px;}
+
+/* END SCREEN */
+.endscreen{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:2rem;text-align:center;display:none;}
+.end-title{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;}
+.end-score{font-family:'Unbounded',sans-serif;font-size:52px;font-weight:900;color:var(--dark);margin-bottom:6px;}
+.end-sub{font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.6;}
+.results-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px;text-align:left;}
+.results-table th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:6px 10px;border-bottom:1px solid var(--border);}
+.results-table td{padding:7px 10px;border-bottom:1px solid var(--surface);}
+.res-ok{color:var(--green);font-weight:500;}
+.res-miss{color:var(--red);font-weight:500;}
+</style>
+</head>
+<body>
+
+<div class="scorebar">
+  <div class="score-card"><div class="score-label">Desafío</div><div class="score-val" id="sc-num">1/6</div></div>
+  <div class="score-card"><div class="score-label">Convertidas</div><div class="score-val green" id="sc-ok">0</div></div>
+  <div class="score-card"><div class="score-label">Erradas</div><div class="score-val red" id="sc-err">0</div></div>
+  <div class="score-card"><div class="score-label">Racha</div><div class="score-val" id="sc-streak">—</div></div>
+</div>
+
+<div class="challenge-box" id="chbox">
+  <div class="ch-header">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="ch-type" id="ch-badge">Tipo</div>
+      <span id="diff-badge" class="diff-badge diff-easy">Fácil</span>
+    </div>
+    <div class="ch-prog" id="ch-prog">Desafío 1 de 6</div>
+  </div>
+  <div class="ch-data" id="ch-data"></div>
+  <div class="ch-question" id="ch-question"></div>
+  <div class="ch-formula" id="ch-formula">y = ...x² + ...x</div>
+</div>
+
+<div class="controls-row">
+  <div class="ctrl-block" id="ctrl-v0">
+    <div class="ctrl-label">Velocidad inicial (m/s)<span id="lv0">18</span></div>
+    <input type="range" min="10" max="30" step="1" value="18" id="sv0">
+  </div>
+  <div class="ctrl-block" id="ctrl-ang">
+    <div class="ctrl-label">Ángulo de patada (°)<span id="lang">40</span></div>
+    <input type="range" min="10" max="75" step="1" value="40" id="sang">
+  </div>
+  <div class="ctrl-block" id="ctrl-dist">
+    <div class="ctrl-label">Distancia al poste (m)<span id="ldist">25</span></div>
+    <input type="range" min="10" max="45" step="1" value="25" id="sdist">
+  </div>
+</div>
+
+<div class="cw">
+  <canvas id="sc"></canvas>
+  <canvas id="confetti-canvas"></canvas>
+</div>
+
+<div class="verdict" id="verdict">
+  <div id="verdict-main"></div>
+  <div class="verdict-detail" id="verdict-detail"></div>
+</div>
+
+<div class="verif-box" id="verif-box">
+  <div class="verif-title">Desarrollo algebraico paso a paso</div>
+  <div id="verif-steps"></div>
+</div>
+
+<div class="btn-row">
+  <button class="kb primary" id="kbtn">⚽ Patear</button>
+  <button class="kb secondary" id="verif-btn" style="display:none">Ver desarrollo</button>
+  <button class="kb secondary" id="nbtn" style="display:none">Siguiente →</button>
+</div>
+
+<div class="endscreen" id="endscreen">
+  <div class="end-title">Resultado final</div>
+  <div class="end-score" id="end-score">—</div>
+  <div class="end-sub" id="end-sub"></div>
+  <table class="results-table" id="results-table">
+    <thead><tr><th>#</th><th>Tipo</th><th>Dificultad</th><th>Ventana</th><th>Tu altura</th><th>Resultado</th></tr></thead>
+    <tbody id="results-body"></tbody>
+  </table>
+  <button class="kb primary" onclick="startGame()" style="max-width:200px;margin:0 auto;display:block;">Jugar de nuevo</button>
+</div>
+
+<script>
+// ── AUDIO ────────────────────────────────────────────────────────────
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+
+function playWhistle(){
+  const o=AC.createOscillator(), g=AC.createGain();
+  o.connect(g); g.connect(AC.destination);
+  o.type='sine'; o.frequency.setValueAtTime(1400,AC.currentTime);
+  o.frequency.exponentialRampToValueAtTime(1800,AC.currentTime+0.08);
+  o.frequency.exponentialRampToValueAtTime(1600,AC.currentTime+0.18);
+  g.gain.setValueAtTime(0.4,AC.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+0.25);
+  o.start(); o.stop(AC.currentTime+0.28);
+}
+
+function playApplause(){
+  for(let i=0;i<6;i++){
+    const b=AC.createBufferSource(), buf=AC.createBuffer(1,AC.sampleRate*0.06,AC.sampleRate);
+    const d=buf.getChannelData(0);
+    for(let j=0;j<d.length;j++) d[j]=(Math.random()*2-1)*Math.exp(-j/(d.length*0.3));
+    b.buffer=buf;
+    const g=AC.createGain(); g.gain.setValueAtTime(0.3,AC.currentTime+i*0.07);
+    b.connect(g); g.connect(AC.destination);
+    b.start(AC.currentTime+i*0.07);
+  }
+}
+
+function playBoo(){
+  const o=AC.createOscillator(), g=AC.createGain();
+  o.connect(g); g.connect(AC.destination);
+  o.type='sawtooth'; o.frequency.setValueAtTime(220,AC.currentTime);
+  o.frequency.exponentialRampToValueAtTime(150,AC.currentTime+0.4);
+  g.gain.setValueAtTime(0.15,AC.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+0.45);
+  o.start(); o.stop(AC.currentTime+0.5);
+}
+
+function playMissThud(){
+  const b=AC.createBufferSource(), buf=AC.createBuffer(1,AC.sampleRate*0.15,AC.sampleRate);
+  const d=buf.getChannelData(0);
+  for(let j=0;j<d.length;j++) d[j]=(Math.random()*2-1)*Math.pow(1-j/d.length,2)*0.8;
+  b.buffer=buf;
+  const g=AC.createGain(); g.gain.setValueAtTime(0.5,AC.currentTime);
+  b.connect(g); g.connect(AC.destination); b.start();
+  setTimeout(playBoo,200);
+}
+
+// ── CONFETTI ─────────────────────────────────────────────────────────
+const cc=document.getElementById('confetti-canvas');
+const cctx=cc.getContext('2d');
+let confettiParts=[], confettiActive=false, confettiAnim=null;
+
+function launchConfetti(){
+  confettiParts=[];
+  for(let i=0;i<120;i++){
+    confettiParts.push({
+      x:Math.random()*cc.offsetWidth, y:-10,
+      vx:(Math.random()-0.5)*4, vy:Math.random()*3+2,
+      color:['#f5a623','#1d9e75','#185fa5','#d85a30','#fff','#f5c842'][Math.floor(Math.random()*6)],
+      w:Math.random()*8+4, h:Math.random()*5+3,
+      rot:Math.random()*360, rotV:(Math.random()-0.5)*8
+    });
+  }
+  confettiActive=true;
+  cc.width=cc.offsetWidth; cc.height=cc.offsetHeight;
+  animConfetti();
+}
+
+function animConfetti(){
+  cctx.clearRect(0,0,cc.width,cc.height);
+  confettiParts.forEach(p=>{
+    p.x+=p.vx; p.y+=p.vy; p.rot+=p.rotV; p.vy+=0.06;
+    cctx.save(); cctx.translate(p.x,p.y); cctx.rotate(p.rot*Math.PI/180);
+    cctx.fillStyle=p.color; cctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); cctx.restore();
+  });
+  confettiParts=confettiParts.filter(p=>p.y<cc.height+20);
+  if(confettiParts.length>0) confettiAnim=requestAnimationFrame(animConfetti);
+  else { cctx.clearRect(0,0,cc.width,cc.height); confettiActive=false; }
+}
+
+// ── PÚBLICO ──────────────────────────────────────────────────────────
+let crowdState='neutral', crowdAnim=0;
+function drawCrowd(toX,toY,dpr,state){
+  const gY=toY(0);
+  const cols=state==='cheer'?['#e88','#8be','#feb','#8ec','#eaf']:['#aaa','#bbb','#999','#ccc','#aab'];
+  for(let i=0;i<18;i++){
+    const cx=toX(i*2.8)+10*dpr, cy=gY+12*dpr;
+    const bounce=state==='cheer'?Math.sin(crowdAnim*0.15+i)*4*dpr:0;
+    ctx.fillStyle=cols[i%cols.length];
+    ctx.beginPath(); ctx.arc(cx,cy-bounce,5*dpr,Math.PI,0); ctx.fill();
+    ctx.fillRect(cx-4*dpr,cy-bounce,8*dpr,8*dpr);
+    if(state==='cheer'){
+      ctx.beginPath(); ctx.moveTo(cx-6*dpr,cy-bounce-3*dpr);
+      ctx.lineTo(cx-10*dpr,cy-bounce-10*dpr); ctx.strokeStyle=cols[i%cols.length];
+      ctx.lineWidth=2*dpr; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx+6*dpr,cy-bounce-3*dpr);
+      ctx.lineTo(cx+10*dpr,cy-bounce-10*dpr); ctx.stroke();
+    }
+  }
+  if(state==='cheer') crowdAnim++;
+}
+
+// ── ESTADO DEL JUEGO ──────────────────────────────────────────────────
+const canvas=document.getElementById('sc');
+const ctx=canvas.getContext('2d');
+let animId=null, animating=false;
+let challenges=[], currentIdx=0, score={ok:0,err:0,streak:0};
+let revealed=false, resultsLog=[];
+
+function rnd(min,max,step){ return min+Math.round(Math.random()*((max-min)/step))*step; }
+
+// Dificultad progresiva: 1-2 fácil, 3-4 medio, 5-6 difícil
+function getDiff(idx){
+  if(idx<2) return {label:'Fácil',cls:'diff-easy',win:2.5};
+  if(idx<4) return {label:'Medio',cls:'diff-med',win:1.8};
+  return {label:'Difícil',cls:'diff-hard',win:1.2};
+}
+
+function genChallenge(type, idx){
+  const diff=getDiff(idx);
+  const v0=rnd(13,25,1), ang=rnd(28,58,2), dist=rnd(12,38,2), barH=rnd(2,4,0.5);
+  const topH=+(barH+diff.win).toFixed(1);
+  const base={barH,topH,diff};
+
+  if(type==='A') return {...base,type:'A',dist,v0Free:true,angFree:true,distFree:false,
+    label:'¿Llegás?',badgeClass:'type-a',
+    question:`Distancia al poste: <strong>${dist} m</strong>. La pelota debe pasar entre <strong>${barH} m</strong> y <strong>${topH} m</strong>. Calculá velocidad y ángulo tales que ${barH} ≤ y(${dist}) ≤ ${topH}.`};
+  if(type==='B') return {...base,type:'B',v0,ang,v0Free:false,angFree:false,distFree:true,
+    label:'¿Desde dónde?',badgeClass:'type-b',
+    question:`Velocidad: <strong>${v0} m/s</strong>, ángulo: <strong>${ang}°</strong>. Ventana: entre <strong>${barH} m</strong> y <strong>${topH} m</strong>. Calculá la distancia x tal que ${barH} ≤ y(x) ≤ ${topH}.`};
+  if(type==='C') return {...base,type:'C',dist,ang,v0Free:true,angFree:false,distFree:false,
+    label:'¿Con qué fuerza?',badgeClass:'type-c',
+    question:`Distancia: <strong>${dist} m</strong>, ángulo: <strong>${ang}°</strong>. Ventana: entre <strong>${barH} m</strong> y <strong>${topH} m</strong>. Calculá v₀ tal que ${barH} ≤ y(${dist}) ≤ ${topH}.`};
+  // Tipo D: inverso — se dan 3 puntos, reconstruir la función
+  const v0i=rnd(14,22,1), angi=rnd(30,55,2);
+  const radi=angi*Math.PI/180, vxi=v0i*Math.cos(radi);
+  const Ai=-9.8/(2*vxi*vxi), Bi=Math.tan(radi);
+  const x1=rnd(4,8,1), x2=rnd(10,16,1), x3=rnd(18,25,1);
+  const y1=+(Ai*x1*x1+Bi*x1).toFixed(1), y2=+(Ai*x2*x2+Bi*x2).toFixed(1), y3=+(Ai*x3*x3+Bi*x3).toFixed(1);
+  return {...base,type:'D',dist:x3,v0Free:false,angFree:false,distFree:false,
+    Ai,Bi,x1,y1,x2,y2,x3,y3,
+    label:'¿Cuál es la función?',badgeClass:'type-inv',
+    question:`La pelota pasó por los puntos (${x1}, ${y1}), (${x2}, ${y2}) y (${x3}, ${y3}). Con esos tres puntos, determiná los coeficientes A y B de y = Ax² + Bx. Una vez que los tenés, <em>ajustá los sliders hasta que la fórmula coincida</em>.`};
+}
+
+function buildChallenges(){
+  const types=['A','B','C','D','A','C'];
+  for(let i=types.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [types[i],types[j]]=[types[j],types[i]]; }
+  return types.map((t,i)=>genChallenge(t,i));
+}
+
+function getAB(v0,ang){ const r=ang*Math.PI/180,vx=v0*Math.cos(r); return{A:-9.8/(2*vx*vx),B:Math.tan(r)}; }
+function yAt(x,A,B){ return A*x*x+B*x; }
+function getSliders(){ return{v0:+document.getElementById('sv0').value,ang:+document.getElementById('sang').value,dist:+document.getElementById('sdist').value}; }
+
+function updFormula(){
+  const {v0,ang}=getSliders(),{A,B}=getAB(v0,ang);
+  document.getElementById('ch-formula').textContent=`y = ${A.toFixed(3)}·x² + ${B.toFixed(2)}·x`;
+}
+
+function updScore(){
+  document.getElementById('sc-ok').textContent=score.ok;
+  document.getElementById('sc-err').textContent=score.err;
+  document.getElementById('sc-streak').textContent=score.streak>1?'🔥 '+score.streak:(score.streak||'—');
+}
+
+function renderChallenge(ch,idx){
+  document.getElementById('ch-badge').textContent=ch.label;
+  document.getElementById('ch-badge').className='ch-type '+ch.badgeClass;
+  document.getElementById('sc-num').textContent=`${idx+1}/6`;
+  document.getElementById('ch-prog').textContent=`Desafío ${idx+1} de 6`;
+  const db=document.getElementById('diff-badge');
+  db.textContent=ch.diff.label; db.className='diff-badge '+ch.diff.cls;
+  document.getElementById('ch-question').innerHTML=ch.question;
+
+  const dd=document.getElementById('ch-data'); dd.innerHTML='';
+  const add=(l,v,u)=>{ const d=document.createElement('div'); d.className='ch-datum'+(u?' unknown':''); d.innerHTML=u?`${l}: <strong>?</strong>`:`${l}: <strong>${v}</strong>`; dd.appendChild(d); };
+  if(ch.type==='A'){ add('Distancia',ch.dist+' m'); add('Mínimo',ch.barH+' m'); add('Máximo',ch.topH+' m'); add('Velocidad','?',true); add('Ángulo','?',true); }
+  if(ch.type==='B'){ add('Velocidad',ch.v0+' m/s'); add('Ángulo',ch.ang+'°'); add('Mínimo',ch.barH+' m'); add('Máximo',ch.topH+' m'); add('Distancia','?',true); }
+  if(ch.type==='C'){ add('Distancia',ch.dist+' m'); add('Ángulo',ch.ang+'°'); add('Mínimo',ch.barH+' m'); add('Máximo',ch.topH+' m'); add('Velocidad','?',true); }
+  if(ch.type==='D'){ add(`(${ch.x1}, ${ch.y1})`,''); add(`(${ch.x2}, ${ch.y2})`,''); add(`(${ch.x3}, ${ch.y3})`,''); add('A','?',true); add('B','?',true); }
+
+  document.getElementById('ctrl-v0').classList.toggle('locked',!ch.v0Free&&ch.type!=='D');
+  document.getElementById('ctrl-ang').classList.toggle('locked',!ch.angFree&&ch.type!=='D');
+  document.getElementById('ctrl-dist').classList.toggle('locked',!ch.distFree&&ch.type!=='D');
+  if(ch.type==='D'){ // todos libres para ajustar
+    document.getElementById('ctrl-v0').classList.remove('locked');
+    document.getElementById('ctrl-ang').classList.remove('locked');
+    document.getElementById('ctrl-dist').classList.remove('locked');
+  }
+  if(!ch.v0Free&&ch.type!=='D'){ document.getElementById('sv0').value=ch.v0; document.getElementById('lv0').textContent=ch.v0; }
+  if(!ch.angFree&&ch.type!=='D'){ document.getElementById('sang').value=ch.ang; document.getElementById('lang').textContent=ch.ang; }
+  if(!ch.distFree&&ch.type!=='D'){ document.getElementById('sdist').value=ch.dist; document.getElementById('ldist').textContent=ch.dist; }
+
+  updFormula();
+  document.getElementById('verdict').style.display='none';
+  document.getElementById('verif-box').style.display='none';
+  document.getElementById('nbtn').style.display='none';
+  document.getElementById('verif-btn').style.display='none';
+  document.getElementById('kbtn').style.display='block';
+  revealed=false; crowdState='neutral'; crowdAnim=0;
+  drawScene(null,0,false);
+}
+
+// ── LAYOUT / CANVAS ───────────────────────────────────────────────────
+function getLayout(v0,ang,dist,barH,topH){
+  topH=topH||barH+2;
+  const {A,B}=getAB(v0,ang);
+  const xV=-B/(2*A),xR=-B/A,hM=yAt(xV,A,B);
+  const xMax=Math.max(xR,dist)*1.2,yMax=Math.max(hM,topH+3)*1.3;
+  const W=canvas.width,H=canvas.height,dpr=window.devicePixelRatio;
+  const PL=44*dpr,PR=28*dpr,PT=22*dpr,PB=50*dpr;
+  const pW=W-PL-PR,pH=H-PT-PB;
+  const toX=x=>PL+(x/xMax)*pW,toY=y=>PT+pH-(y/yMax)*pH;
+  return{W,H,PL,PR,PT,PB,pW,pH,toX,toY,xMax,yMax,xV,xR,hM,A,B,dpr};
+}
+
+function drawPostes(toX,toY,dist,barH,topH,dpr){
+  const cX=toX(dist),gY=toY(0),travY=toY(barH),topY=toY(topH);
+  const half=22*dpr,pw=4*dpr,col='#c8bfa0';
+  const ext=(gY-travY)*0.9,tope=travY-ext;
+  // Ventana verde
+  ctx.fillStyle='rgba(29,158,117,0.2)';
+  ctx.fillRect(cX-half+pw/2,topY,half*2-pw,travY-topY);
+  ctx.strokeStyle='rgba(29,158,117,0.65)';ctx.lineWidth=1.5*dpr;ctx.setLineDash([4*dpr,3*dpr]);
+  ctx.beginPath();ctx.moveTo(cX-half+pw/2,topY);ctx.lineTo(cX+half-pw/2,topY);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle=col;
+  ctx.fillRect(cX-half-pw/2,tope,pw,gY-tope);
+  ctx.fillRect(cX+half-pw/2,tope,pw,gY-tope);
+  ctx.fillRect(cX-half-pw/2,travY-pw/2,half*2+pw,pw);
+  [cX-half,cX+half].forEach(cx=>{ctx.beginPath();ctx.arc(cx,tope,pw/2,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();});
+  ctx.fillStyle='rgba(80,80,80,0.7)';ctx.font=`${11*dpr}px DM Sans`;
+  ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(`${dist} m`,cX,gY+5*dpr);
+  ctx.textAlign='left';ctx.textBaseline='middle';
+  ctx.fillText(`${barH} m`,cX+half+pw+4*dpr,travY);
+  ctx.fillStyle='rgba(29,158,117,0.9)';
+  ctx.fillText(`${topH} m`,cX+half+pw+4*dpr,topY);
+}
+
+function drawKicker(toX,toY,progress,dpr){
+  const gY=toY(0),pX=toX(-0.8);
+  const hR=7*dpr,tH=22*dpr,lH=22*dpr;
+  ctx.save();ctx.strokeStyle='#334';ctx.fillStyle='#334';ctx.lineWidth=3*dpr;ctx.lineCap='round';
+  const hY=gY-lH-tH-hR;
+  ctx.beginPath();ctx.arc(pX,hY,hR,0,Math.PI*2);ctx.fill();
+  const sY=hY+hR,hipY=sY+tH;
+  ctx.beginPath();ctx.moveTo(pX,sY);ctx.lineTo(pX,hipY);ctx.stroke();
+  const aA=0.4+progress*0.5;
+  [[- 1],[1]].forEach(([s])=>{ctx.beginPath();ctx.moveTo(pX,sY+6*dpr);ctx.lineTo(pX+s*Math.cos(aA)*18*dpr,sY+6*dpr+Math.sin(aA)*10*dpr);ctx.stroke();});
+  ctx.beginPath();ctx.moveTo(pX,hipY);ctx.lineTo(pX-5*dpr,gY);ctx.stroke();
+  const kA=-Math.PI/2+progress*(Math.PI/2+0.4);
+  const knX=pX+Math.cos(kA)*lH*0.5,knY=hipY+Math.sin(kA)*lH*0.5;
+  const fA=kA+(progress<0.5?0.3:-0.3);
+  const fX=knX+Math.cos(fA)*lH*0.5,fY=knY+Math.sin(fA)*lH*0.5;
+  ctx.beginPath();ctx.moveTo(pX,hipY);ctx.lineTo(knX,knY);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(knX,knY);ctx.lineTo(fX,fY);ctx.stroke();
+  ctx.restore();
+}
+
+function drawBall(bpx,bpy,vyDir,passed){
+  ctx.save();ctx.translate(bpx,bpy);ctx.rotate(Math.atan2(-vyDir,1));
+  ctx.beginPath();ctx.ellipse(0,0,10,7,0,0,Math.PI*2);
+  ctx.fillStyle=passed?'#c8954a':'#D85A30';ctx.fill();
+  ctx.strokeStyle=passed?'#7a5a2a':'#8a3010';ctx.lineWidth=1.2;ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,0.7)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(-5,0);ctx.lineTo(5,0);ctx.stroke();
+  ctx.restore();
+}
+
+function drawPoints(toX,toY,ch,dpr){
+  if(ch.type!=='D') return;
+  [[ch.x1,ch.y1],[ch.x2,ch.y2],[ch.x3,ch.y3]].forEach(([x,y])=>{
+    ctx.beginPath();ctx.arc(toX(x),toY(y),5*dpr,0,Math.PI*2);
+    ctx.fillStyle='#8a2be2';ctx.fill();
+    ctx.fillStyle='#5a1d9e';ctx.font=`${11*dpr}px DM Sans`;
+    ctx.textAlign='center';ctx.textBaseline='alphabetic';
+    ctx.fillText(`(${x},${y})`,toX(x),toY(y)-8*dpr);
+  });
+}
+
+function drawScene(ballState,kickProgress,showTraj){
+  const {v0,ang,dist}=getSliders();
+  const ch=challenges[currentIdx];if(!ch)return;
+  const barH=ch.barH,topH=ch.topH;
+  const {W,H,PL,PB,PT,pW,pH,toX,toY,xMax,yMax,xV,xR,hM,A,B,dpr}=getLayout(v0,ang,dist,barH,topH);
+  ctx.clearRect(0,0,W,H);
+  const gY=toY(0);
+  ctx.fillStyle='#c9e8f5';ctx.fillRect(PL,PT,pW,pH);
+  ctx.fillStyle='#4a9a55';ctx.fillRect(PL,gY,pW,H-gY);
+
+  // Público
+  drawCrowd(toX,toY,dpr,crowdState);
+
+  ctx.strokeStyle='rgba(100,100,100,0.1)';ctx.lineWidth=1;
+  for(let yi=2;yi<=Math.ceil(yMax);yi+=2){ctx.beginPath();ctx.moveTo(PL,toY(yi));ctx.lineTo(PL+pW,toY(yi));ctx.stroke();}
+  ctx.strokeStyle='rgba(80,80,80,0.3)';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(PL,PT);ctx.lineTo(PL,gY);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(PL,gY);ctx.lineTo(PL+pW,gY);ctx.stroke();
+  ctx.fillStyle='rgba(60,60,60,0.65)';ctx.font=`${11*dpr}px DM Sans`;
+  ctx.textAlign='center';ctx.textBaseline='top';
+  for(let xi=0;xi<=Math.ceil(xMax);xi+=5)ctx.fillText(xi,toX(xi),gY+4*dpr);
+  ctx.textAlign='right';ctx.textBaseline='middle';
+  for(let yi=2;yi<=Math.ceil(yMax);yi+=2)ctx.fillText(yi,PL-4*dpr,toY(yi));
+  ctx.textAlign='center';ctx.textBaseline='alphabetic';
+  ctx.fillText('x (m)',PL+pW/2,H-5*dpr);
+  ctx.save();ctx.translate(12*dpr,PT+pH/2);ctx.rotate(-Math.PI/2);ctx.fillText('y (m)',0,0);ctx.restore();
+
+  if(showTraj){
+    ctx.beginPath();ctx.strokeStyle='rgba(50,50,50,0.2)';ctx.lineWidth=1.5;ctx.setLineDash([5*dpr,5*dpr]);
+    let first=true;
+    for(let s=0;s<=pW;s++){const x=(s/pW)*xMax,y=yAt(x,A,B);if(y<0)break;first?ctx.moveTo(PL+s,toY(y)):ctx.lineTo(PL+s,toY(y));first=false;}
+    ctx.stroke();ctx.setLineDash([]);
+    const vxPx=toX(xV),vyPx=toY(Math.min(hM,yMax*0.97));
+    ctx.beginPath();ctx.arc(vxPx,vyPx,4*dpr,0,Math.PI*2);ctx.fillStyle='#378ADD';ctx.fill();
+    ctx.fillStyle='#185FA5';ctx.font=`${11*dpr}px DM Sans`;
+    ctx.textAlign='center';ctx.textBaseline='alphabetic';
+    ctx.fillText(`V(${xV.toFixed(1)}, ${hM.toFixed(1)})`,vxPx,vyPx-7*dpr);
+    if(!ballState){
+      const hP=yAt(dist,A,B);
+      if(hP>0){
+        const passed=hP>=barH&&hP<=topH&&dist<=xR,cX=toX(dist);
+        ctx.strokeStyle=passed?'#1D9E75':'#D85A30';ctx.lineWidth=1.5*dpr;ctx.setLineDash([4*dpr,4*dpr]);
+        ctx.beginPath();ctx.moveTo(cX,gY);ctx.lineTo(cX,toY(Math.min(hP,yMax*0.98)));ctx.stroke();ctx.setLineDash([]);
+        ctx.beginPath();ctx.arc(cX,toY(Math.min(hP,yMax*0.98)),5*dpr,0,Math.PI*2);
+        ctx.fillStyle=passed?'#1D9E75':'#D85A30';ctx.fill();
+      }
+    }
+  }
+
+  drawPostes(toX,toY,dist,barH,topH,dpr);
+  drawPoints(toX,toY,ch,dpr);
+  if(kickProgress!==undefined&&kickProgress>=0)drawKicker(toX,toY,kickProgress,dpr);
+  if(ballState){
+    const hP=yAt(dist,A,B),passed=hP>=barH&&hP<=topH&&dist<=xR;
+    drawBall(toX(ballState.x),toY(Math.max(ballState.y,0)),ballState.vyDir,passed);
+  }
+}
+
+// ── VERIFICACIÓN ALGEBRAICA ───────────────────────────────────────────
+function showVerification(){
+  const ch=challenges[currentIdx],{v0,ang,dist}=getSliders();
+  const {A,B}=getAB(v0,ang);
+  const hP=yAt(dist,A,B);
+  const box=document.getElementById('verif-box');
+  const steps=document.getElementById('verif-steps');
+  box.style.display='block';
+
+  if(ch.type==='D'){
+    steps.innerHTML=`
+      <div class="verif-step"><div class="verif-num">1</div><div>Planteamos el sistema con los tres puntos conocidos usando y = Ax² + Bx:<br>
+        <span class="verif-math">${ch.y1} = A·${ch.x1}² + B·${ch.x1} = ${ch.x1*ch.x1}A + ${ch.x1}B</span><br>
+        <span class="verif-math">${ch.y2} = A·${ch.x2}² + B·${ch.x2} = ${ch.x2*ch.x2}A + ${ch.x2}B</span>
+      </div></div>
+      <div class="verif-step"><div class="verif-num">2</div><div>Restamos las ecuaciones para eliminar una incógnita y despejamos A y B.<br>
+        <span class="verif-math">A = ${ch.Ai.toFixed(4)}, B = ${ch.Bi.toFixed(4)}</span>
+      </div></div>
+      <div class="verif-step"><div class="verif-num">3</div><div>Verificamos con el tercer punto:<br>
+        <span class="verif-math">y(${ch.x3}) = ${ch.Ai.toFixed(3)}·${ch.x3}² + ${ch.Bi.toFixed(3)}·${ch.x3} = ${(ch.Ai*ch.x3*ch.x3+ch.Bi*ch.x3).toFixed(1)} ✓</span>
+      </div></div>`;
+    return;
+  }
+
+  const angRad=(ang*Math.PI/180), vx=(v0*Math.cos(angRad));
+  steps.innerHTML=`
+    <div class="verif-step"><div class="verif-num">1</div><div>Descomponemos la velocidad inicial:<br>
+      <span class="verif-math">vx = ${v0}·cos(${ang}°) = ${vx.toFixed(2)} m/s</span><br>
+      <span class="verif-math">tan(${ang}°) = ${Math.tan(angRad).toFixed(3)}</span>
+    </div></div>
+    <div class="verif-step"><div class="verif-num">2</div><div>Formamos la función de trayectoria:<br>
+      <span class="verif-math">y = −g/(2·vx²)·x² + tan(θ)·x</span><br>
+      <span class="verif-math">y = −9.8/(2·${vx.toFixed(2)}²)·x² + ${Math.tan(angRad).toFixed(3)}·x</span><br>
+      <span class="verif-math">y = ${A.toFixed(4)}·x² + ${B.toFixed(3)}·x</span>
+    </div></div>
+    <div class="verif-step"><div class="verif-num">3</div><div>Evaluamos en x = ${dist} m (distancia al poste):<br>
+      <span class="verif-math">y(${dist}) = ${A.toFixed(4)}·${dist}² + ${B.toFixed(3)}·${dist}</span><br>
+      <span class="verif-math">y(${dist}) = ${(A*dist*dist).toFixed(3)} + ${(B*dist).toFixed(3)} = <strong>${hP.toFixed(2)} m</strong></span>
+    </div></div>
+    <div class="verif-step"><div class="verif-num">4</div><div>Verificamos la condición de la ventana:<br>
+      <span class="verif-math">${ch.barH} ≤ ${hP.toFixed(2)} ≤ ${ch.topH} → ${hP>=ch.barH&&hP<=ch.topH?'✅ Cumple':'❌ No cumple'}</span>
+    </div></div>`;
+}
+
+// ── ANIMACIÓN ─────────────────────────────────────────────────────────
+function kickAnimation(){
+  if(animId)cancelAnimationFrame(animId);
+  animating=true; revealed=true;
+  document.getElementById('verdict').style.display='none';
+  document.getElementById('verif-box').style.display='none';
+  document.getElementById('kbtn').style.display='none';
+  if(AC.state==='suspended')AC.resume();
+  playWhistle();
+
+  const {v0,ang,dist}=getSliders();
+  const ch=challenges[currentIdx],barH=ch.barH,topH=ch.topH;
+  const {A,B}=getAB(v0,ang),xR=-B/A;
+  const hPost=yAt(dist,A,B),passed=hPost>=barH&&hPost<=topH&&dist<=xR;
+
+  let startTime=null,phase='kick';
+  const durKick=500,durFly=1400;
+
+  function step(ts){
+    if(!startTime)startTime=ts;
+    const elapsed=ts-startTime;
+    if(phase==='kick'){
+      const t=Math.min(elapsed/durKick,1);
+      drawScene(null,t,false);
+      if(t>=1){phase='fly';startTime=ts;}
+    } else {
+      const t=Math.min(elapsed/durFly,1);
+      const xEnd=Math.max(xR,dist)*1.05,x=t*xEnd;
+      const y=yAt(Math.min(x,xR>0?xR:x),A,B),slope=2*A*x+B;
+      if(crowdState==='neutral'&&x>=dist*0.7) crowdState=passed?'cheer':'boo';
+      drawScene({x,y:Math.max(y,0),vyDir:-slope},undefined,true);
+      if(t>=1){
+        animating=false;
+        crowdState=passed?'cheer':'neutral';
+        drawScene(null,undefined,true);
+
+        // Sonidos y confeti
+        if(passed){ playApplause(); launchConfetti(); }
+        else { playMissThud(); }
+
+        // Verdict
+        const v=document.getElementById('verdict');
+        v.style.display='block';
+        v.className='verdict '+(passed?'goal':'miss');
+        document.getElementById('verdict-main').textContent=passed
+          ?`¡Conversión! La pelota pasó a ${hPost.toFixed(2)} m`
+          :(hPost<barH?`No convierte. Altura: ${hPost.toFixed(2)} m — por debajo del mínimo de ${barH} m.`:`Demasiado alto. Altura: ${hPost.toFixed(2)} m — superó el máximo de ${topH} m.`);
+
+        // Detalle del error
+        let detail='';
+        if(!passed){
+          const diff=hPost<barH?barH-hPost:hPost-topH;
+          detail=hPost<barH
+            ?`Le faltaron ${diff.toFixed(2)} m para superar el travesaño. Probá aumentar la velocidad o el ángulo.`
+            :`Se pasó por ${diff.toFixed(2)} m. Reducí la velocidad o el ángulo.`;
+        } else {
+          detail=`Dentro de la ventana (${barH}–${topH} m). ¡Cálculo perfecto!`;
+        }
+        document.getElementById('verdict-detail').textContent=detail;
+
+        // Score y log
+        if(passed){score.ok++;score.streak++;}else{score.err++;score.streak=0;}
+        updScore();
+        resultsLog.push({idx:currentIdx+1,type:ch.label,diff:ch.diff.label,barH,topH,hPost,passed});
+
+        document.getElementById('verif-btn').style.display='block';
+        if(currentIdx<challenges.length-1) document.getElementById('nbtn').style.display='block';
+        else setTimeout(showEnd,1800);
+        return;
+      }
+    }
+    animId=requestAnimationFrame(step);
+  }
+  animId=requestAnimationFrame(step);
+}
+
+// ── FIN DE JUEGO ──────────────────────────────────────────────────────
+function showEnd(){
+  document.getElementById('chbox').style.display='none';
+  document.querySelector('.controls-row').style.display='none';
+  document.querySelector('.cw').style.display='none';
+  document.getElementById('verdict').style.display='none';
+  document.getElementById('verif-box').style.display='none';
+  document.querySelector('.btn-row').style.display='none';
+  document.getElementById('endscreen').style.display='block';
+  document.getElementById('end-score').textContent=`${score.ok} / 6`;
+  const msgs=['Seguí practicando — los cálculos mejoran con la repetición.','Buen intento, ya encontraste el ritmo.','Muy bien — dominás las funciones cuadráticas aplicadas.','¡Perfecto! Pateador élite y matemático de primer nivel.'];
+  document.getElementById('end-sub').textContent=msgs[Math.min(Math.floor(score.ok/2),3)];
+  const tbody=document.getElementById('results-body');
+  tbody.innerHTML='';
+  resultsLog.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${r.idx}</td><td>${r.type}</td><td>${r.diff}</td><td>${r.barH}–${r.topH} m</td><td>${r.hPost.toFixed(2)} m</td><td class="${r.passed?'res-ok':'res-miss'}">${r.passed?'✅ Convirtió':'❌ Erró'}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function startGame(){
+  challenges=buildChallenges(); currentIdx=0; score={ok:0,err:0,streak:0}; resultsLog=[]; updScore();
+  ['chbox','.controls-row','.cw','.btn-row'].forEach(s=>{
+    const el=s.startsWith('.')?document.querySelector(s):document.getElementById(s);
+    el.style.display=s==='.controls-row'||s==='.btn-row'?'flex':'block';
+  });
+  document.getElementById('endscreen').style.display='none';
+  document.getElementById('kbtn').style.display='block';
+  document.getElementById('nbtn').style.display='none';
+  document.getElementById('verdict').style.display='none';
+  document.getElementById('verif-box').style.display='none';
+  renderChallenge(challenges[0],0);
+}
+
+// ── EVENTOS ───────────────────────────────────────────────────────────
+['sv0','sang','sdist'].forEach((id,i)=>{
+  document.getElementById(id).addEventListener('input',e=>{
+    document.getElementById(['lv0','lang','ldist'][i]).textContent=e.target.value;
+    updFormula();
+    if(!revealed)drawScene(null,0,false);else drawScene(null,undefined,true);
+  });
+});
+document.getElementById('kbtn').addEventListener('click',()=>{if(!animating)kickAnimation();});
+document.getElementById('nbtn').addEventListener('click',()=>{ currentIdx++; renderChallenge(challenges[currentIdx],currentIdx); });
+document.getElementById('verif-btn').addEventListener('click',()=>{
+  const vb=document.getElementById('verif-box');
+  if(vb.style.display==='none'){showVerification();document.getElementById('verif-btn').textContent='Ocultar desarrollo';}
+  else{vb.style.display='none';document.getElementById('verif-btn').textContent='Ver desarrollo';}
+});
+
+function resize(){
+  const dpr=window.devicePixelRatio;
+  canvas.width=canvas.offsetWidth*dpr; canvas.height=300*dpr; canvas.style.height='300px';
+  cc.width=canvas.offsetWidth; cc.height=300;
+  if(challenges.length&&challenges[currentIdx])drawScene(null,revealed?undefined:0,revealed);
+}
+window.addEventListener('resize',resize);
+startGame();
+</script>
+</body>
+</html>
