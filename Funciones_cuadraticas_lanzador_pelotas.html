@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lanzador de Pelotas — Funciones Cuadráticas</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=DM+Sans:ital,wght@0,300;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --card: #1a1a26;
+    --accent: #f5c842;
+    --accent2: #ff6b35;
+    --accent3: #4ecdc4;
+    --text: #f0eee8;
+    --muted: #6b6a7a;
+    --border: #2a2a3a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  header {
+    padding: 2rem 2.5rem 1rem;
+    display: flex;
+    align-items: baseline;
+    gap: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+  }
+
+  .tag {
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    padding: 0.2rem 0.6rem;
+    border-radius: 2rem;
+  }
+
+  .main-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 0;
+    height: calc(100vh - 70px);
+  }
+
+  /* PANEL IZQUIERDO */
+  .panel {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 2rem 1.8rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .panel-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 0.85rem;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .formula-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.2rem 1.5rem;
+    text-align: center;
+  }
+
+  .formula-display {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 1.05rem;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  .formula-display span.a { color: var(--accent); }
+  .formula-display span.b { color: var(--accent2); }
+  .formula-display span.c { color: var(--accent3); }
+
+  .slider-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+  }
+
+  .slider-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .slider-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .slider-label .var {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .var-a { color: var(--accent); }
+  .var-b { color: var(--accent2); }
+  .var-c { color: var(--accent3); }
+
+  .slider-val {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    min-width: 40px;
+    text-align: right;
+  }
+
+  .slider-desc {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-style: italic;
+    line-height: 1.4;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  input[type=range].a-slider { background: linear-gradient(to right, var(--accent) var(--pct, 50%), var(--border) var(--pct, 50%)); }
+  input[type=range].b-slider { background: linear-gradient(to right, var(--accent2) var(--pct, 50%), var(--border) var(--pct, 50%)); }
+  input[type=range].c-slider { background: linear-gradient(to right, var(--accent3) var(--pct, 50%), var(--border) var(--pct, 50%)); }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--text);
+    border: 3px solid var(--bg);
+    box-shadow: 0 0 0 2px currentColor;
+    transition: transform 0.15s;
+  }
+
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+  .info-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.7rem;
+  }
+
+  .info-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.9rem;
+    text-align: center;
+  }
+
+  .info-card-label {
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.3rem;
+  }
+
+  .info-card-val {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+
+  .btn-launch {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: 10px;
+    padding: 1rem;
+    font-family: 'Unbounded', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .btn-launch:hover {
+    background: #ffd44a;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(245, 200, 66, 0.3);
+  }
+
+  .btn-launch:active { transform: translateY(0); }
+
+  /* CANVAS AREA */
+  .canvas-area {
+    position: relative;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .canvas-header {
+    padding: 1.2rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .canvas-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 0.9rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  .canvas-wrapper {
+    flex: 1;
+    position: relative;
+    padding: 1.5rem 2rem 2rem;
+  }
+
+  canvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    display: block;
+  }
+
+  /* Animación de la pelota */
+  .ball {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #fff 0%, var(--accent2) 60%, #c44 100%);
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.6);
+    pointer-events: none;
+    display: none;
+    z-index: 10;
+    transition: none;
+  }
+
+  .field-lines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  /* Leyenda */
+  .legend {
+    position: absolute;
+    top: 2.5rem;
+    right: 2.5rem;
+    background: rgba(18,18,26,0.9);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.9rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    backdrop-filter: blur(8px);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Tooltip del discriminante */
+  .discriminant-badge {
+    position: absolute;
+    bottom: 2.5rem;
+    right: 2.5rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.8rem 1.2rem;
+    font-size: 0.8rem;
+  }
+
+  .disc-label { color: var(--muted); margin-bottom: 0.2rem; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; }
+  .disc-val {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+  .disc-positive { color: var(--accent3); }
+  .disc-zero { color: var(--accent); }
+  .disc-negative { color: var(--accent2); }
+
+  .roots-info {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 0.3rem;
+  }
+
+  @media (max-width: 900px) {
+    .main-layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; height: auto; }
+    .canvas-area { height: 60vw; min-height: 320px; }
+    .panel { height: auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⚽ Lanzador</div>
+  <div class="tag">Funciones Cuadráticas · 2° Secundaria</div>
+</header>
+
+<div class="main-layout">
+
+  <!-- PANEL DE CONTROL -->
+  <aside class="panel">
+    <div>
+      <div class="panel-title">Ecuación de la Trayectoria</div>
+      <div class="formula-box">
+        <div class="formula-display">
+          y = <span class="a" id="fa">-1</span>x² + <span class="b" id="fb">4</span>x + <span class="c" id="fc">2</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="slider-group">
+      <!-- A -->
+      <div class="slider-item">
+        <div class="slider-header">
+          <div class="slider-label">
+            <span class="var var-a">a</span>
+            <span style="color:var(--muted); font-size:0.8rem">— curvatura</span>
+          </div>
+          <div class="slider-val var-a" id="va">-1</div>
+        </div>
+        <input type="range" class="a-slider" id="sa" min="-3" max="-0.1" step="0.1" value="-1">
+        <div class="slider-desc">Controla qué tan abierta o cerrada es la parábola. Siempre negativo → la pelota cae.</div>
+      </div>
+
+      <!-- B -->
+      <div class="slider-item">
+        <div class="slider-header">
+          <div class="slider-label">
+            <span class="var var-b">b</span>
+            <span style="color:var(--muted); font-size:0.8rem">— impulso inicial</span>
+          </div>
+          <div class="slider-val var-b" id="vb">4</div>
+        </div>
+        <input type="range" class="b-slider" id="sb" min="0" max="10" step="0.5" value="4">
+        <div class="slider-desc">Mayor <em>b</em> → más velocidad horizontal al salir. La pelota llega más lejos.</div>
+      </div>
+
+      <!-- C -->
+      <div class="slider-item">
+        <div class="slider-header">
+          <div class="slider-label">
+            <span class="var var-c">c</span>
+            <span style="color:var(--muted); font-size:0.8rem">— altura inicial</span>
+          </div>
+          <div class="slider-val var-c" id="vc">2</div>
+        </div>
+        <input type="range" class="c-slider" id="sc" min="0" max="8" step="0.5" value="2">
+        <div class="slider-desc">Es la altura del punto de lanzamiento (cuando x = 0). ¡El término independiente!</div>
+      </div>
+    </div>
+
+    <!-- INFO CARDS -->
+    <div>
+      <div class="panel-title" style="margin-bottom:0.8rem">Datos del lanzamiento</div>
+      <div class="info-cards">
+        <div class="info-card">
+          <div class="info-card-label">Altura máx.</div>
+          <div class="info-card-val var-a" id="hmax">—</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">Vértice x</div>
+          <div class="info-card-val var-b" id="vx">—</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">Alcance</div>
+          <div class="info-card-val var-c" id="alc">—</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">H. inicial</div>
+          <div class="info-card-val" id="hi">—</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-launch" id="btnLaunch">🚀 ¡Lanzar!</button>
+  </aside>
+
+  <!-- CANVAS -->
+  <div class="canvas-area">
+    <div class="canvas-header">
+      <span class="canvas-title">Plano Cartesiano</span>
+      <span style="font-size:0.75rem; color:var(--muted)">Ajustá los parámetros y lanzá</span>
+    </div>
+    <div class="canvas-wrapper">
+      <canvas id="graph"></canvas>
+      <div class="ball" id="ball"></div>
+
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Parábola y = ax²+bx+c</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--accent2)"></div>Trayectoria de la pelota</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--accent3)"></div>Vértice (altura máxima)</div>
+      </div>
+
+      <div class="discriminant-badge">
+        <div class="disc-label">Discriminante Δ = b² − 4ac</div>
+        <div class="disc-val" id="discVal">—</div>
+        <div class="roots-info" id="rootsInfo">—</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const canvas = document.getElementById('graph');
+const ctx = canvas.getContext('2d');
+const ball = document.getElementById('ball');
+const wrapper = document.querySelector('.canvas-wrapper');
+
+let aVal = -1, bVal = 4, cVal = 2;
+let animId = null;
+
+function f(x) { return aVal * x * x + bVal * x + cVal; }
+
+function resize() {
+  canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+  canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+  draw();
+}
+
+function getRange() {
+  // Vertex x
+  const vx = -bVal / (2 * aVal);
+  // Find x where y=0 (roots)
+  const disc = bVal*bVal - 4*aVal*cVal;
+  let xMax;
+  if (disc >= 0) {
+    xMax = (-bVal + Math.sqrt(disc)) / (2*aVal);
+    xMax = Math.max(xMax, (-bVal - Math.sqrt(disc)) / (2*aVal));
+  } else {
+    xMax = vx + 5;
+  }
+  xMax = Math.max(xMax, vx + 1) * 1.25;
+  const xMin = -0.5;
+  return { xMin, xMax };
+}
+
+function draw() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const dpr = window.devicePixelRatio;
+
+  // Márgenes: el área de plot queda bien adentro para que los números
+  // de los ejes tengan espacio propio fuera de la zona de dibujo
+  const PAD_LEFT   = 50 * dpr;   // espacio para labels eje Y
+  const PAD_RIGHT  = 20 * dpr;
+  const PAD_TOP    = 24 * dpr;
+  const PAD_BOTTOM = 40 * dpr;   // espacio para labels eje X
+  const plotW = W - PAD_LEFT - PAD_RIGHT;
+  const plotH = H - PAD_TOP  - PAD_BOTTOM;
+
+  const { xMin, xMax } = getRange();
+  const yMin = 0;
+  const vxC = -bVal / (2*aVal);
+  const vyC = f(vxC);
+  const yMax = Math.max(vyC * 1.25, cVal * 1.2, 5);
+
+  // Mapeo matemático → píxeles dentro del área de plot
+  const toX = x => PAD_LEFT + ((x - xMin) / (xMax - xMin)) * plotW;
+  const toY = y => PAD_TOP  + plotH - ((y - yMin) / (yMax - yMin)) * plotH;
+
+  // Fondo del área de plot
+  ctx.fillStyle = '#0d0d18';
+  ctx.fillRect(PAD_LEFT, PAD_TOP, plotW, plotH);
+
+  // ── Grid ──────────────────────────────────────────────────────────
+  ctx.strokeStyle = '#1e1e2e';
+  ctx.lineWidth = 1;
+  for (let i = Math.ceil(xMin); i <= Math.floor(xMax); i++) {
+    const px = toX(i);
+    ctx.beginPath(); ctx.moveTo(px, PAD_TOP); ctx.lineTo(px, PAD_TOP + plotH); ctx.stroke();
+  }
+  for (let j = 0; j <= Math.floor(yMax); j++) {
+    const py = toY(j);
+    ctx.beginPath(); ctx.moveTo(PAD_LEFT, py); ctx.lineTo(PAD_LEFT + plotW, py); ctx.stroke();
+  }
+
+  // ── Ejes principales ──────────────────────────────────────────────
+  // Eje X en y=0 (base del plot, borde inferior del área)
+  const axisY = toY(0);   // px vertical donde y=0
+  // Eje Y en x=0 (borde izquierdo del área de plot, xMin ~ -0.5)
+  // Lo dibujamos sobre el borde izquierdo real del plot
+  const axisXpx = PAD_LEFT; // el eje Y visual es el borde izquierdo
+
+  ctx.strokeStyle = '#5a5a8a';
+  ctx.lineWidth = 2 * dpr;
+  // Eje X horizontal
+  ctx.beginPath(); ctx.moveTo(PAD_LEFT, axisY); ctx.lineTo(PAD_LEFT + plotW, axisY); ctx.stroke();
+  // Eje Y vertical (borde izq del plot)
+  ctx.beginPath(); ctx.moveTo(PAD_LEFT, PAD_TOP); ctx.lineTo(PAD_LEFT, PAD_TOP + plotH); ctx.stroke();
+
+  // Flechas
+  ctx.fillStyle = '#5a5a8a';
+  // ↑ eje Y
+  ctx.beginPath();
+  ctx.moveTo(PAD_LEFT, PAD_TOP);
+  ctx.lineTo(PAD_LEFT - 5*dpr, PAD_TOP + 10*dpr);
+  ctx.lineTo(PAD_LEFT + 5*dpr, PAD_TOP + 10*dpr);
+  ctx.fill();
+  // → eje X
+  ctx.beginPath();
+  ctx.moveTo(PAD_LEFT + plotW, axisY);
+  ctx.lineTo(PAD_LEFT + plotW - 10*dpr, axisY - 5*dpr);
+  ctx.lineTo(PAD_LEFT + plotW - 10*dpr, axisY + 5*dpr);
+  ctx.fill();
+
+  // ── Labels eje X (números debajo de la línea del eje X) ───────────
+  ctx.fillStyle = '#9a9aba';
+  ctx.font = `${11 * dpr}px DM Sans`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  for (let i = Math.ceil(xMin); i <= Math.floor(xMax); i++) {
+    if (i < 0) continue;
+    const px = toX(i);
+    // tick
+    ctx.strokeStyle = '#5a5a8a';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(px, axisY); ctx.lineTo(px, axisY + 5*dpr); ctx.stroke();
+    // número en la zona PAD_BOTTOM, bien por debajo del eje
+    ctx.fillStyle = '#9a9aba';
+    ctx.fillText(i, px, axisY + 8*dpr);
+  }
+
+  // ── Labels eje Y (números a la izquierda del borde del plot) ──────
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let j = 1; j <= Math.floor(yMax); j++) {
+    const py = toY(j);
+    // tick
+    ctx.strokeStyle = '#5a5a8a';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(PAD_LEFT - 5*dpr, py); ctx.lineTo(PAD_LEFT, py); ctx.stroke();
+    // número en el área PAD_LEFT, a la izquierda del borde
+    ctx.fillStyle = '#9a9aba';
+    ctx.fillText(j, PAD_LEFT - 8*dpr, py);
+  }
+  // "0" en la esquina
+  ctx.fillStyle = '#5a5a8a';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.fillText('0', PAD_LEFT - 6*dpr, axisY + 4*dpr);
+
+  // ── Nombres de ejes ───────────────────────────────────────────────
+  ctx.fillStyle = '#6a6a8a';
+  ctx.font = `bold ${10 * dpr}px DM Sans`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  // "x" al final del eje X
+  ctx.fillText('x', PAD_LEFT + plotW + 14*dpr, axisY + 4*dpr);
+  // "y" encima del eje Y
+  ctx.fillText('y', PAD_LEFT, PAD_TOP - 8*dpr);
+
+  // ── Curvas (con clip para no salir del área de plot) ──────────────
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(PAD_LEFT, PAD_TOP, plotW, plotH);
+  ctx.clip();
+
+  // Parábola completa (punteada, sutil)
+  ctx.beginPath();
+  ctx.strokeStyle = 'rgba(245,200,66,0.25)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([8, 6]);
+  for (let s = 0; s <= plotW; s++) {
+    const x = xMin + (s / plotW) * (xMax - xMin);
+    const cpx = PAD_LEFT + s, cpy = toY(f(x));
+    s === 0 ? ctx.moveTo(cpx, cpy) : ctx.lineTo(cpx, cpy);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Trayectoria real (x≥0, y≥0)
+  ctx.beginPath();
+  ctx.strokeStyle = '#ff6b35';
+  ctx.lineWidth = 3 * dpr;
+  let started = false;
+  for (let s = 0; s <= plotW; s++) {
+    const x = xMin + (s / plotW) * (xMax - xMin);
+    if (x < 0) continue;
+    const y = f(x);
+    if (y < 0) break;
+    const cpx = PAD_LEFT + s, cpy = toY(y);
+    started ? ctx.lineTo(cpx, cpy) : (ctx.moveTo(cpx, cpy), started = true);
+  }
+  ctx.stroke();
+
+  ctx.restore();
+
+  // ── Vértice ───────────────────────────────────────────────────────
+  const vxPx = toX(vxC), vyPx = toY(vyC);
+  ctx.beginPath();
+  ctx.arc(vxPx, vyPx, 7 * dpr, 0, Math.PI*2);
+  ctx.fillStyle = '#4ecdc4';
+  ctx.fill();
+  ctx.strokeStyle = '#0a0a0f';
+  ctx.lineWidth = 2 * dpr;
+  ctx.stroke();
+
+  // Label del vértice — siempre dentro del área visible
+  ctx.fillStyle = '#4ecdc4';
+  ctx.font = `bold ${11 * dpr}px DM Sans`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(`V(${vxC.toFixed(1)}, ${vyC.toFixed(1)})`, vxPx, Math.max(vyPx - 12*dpr, PAD_TOP + 16*dpr));
+
+  // Punto de lanzamiento
+  ctx.beginPath();
+  ctx.arc(toX(0), toY(cVal), 6 * dpr, 0, Math.PI*2);
+  ctx.fillStyle = '#f5c842';
+  ctx.fill();
+
+  updateInfo(vxC, vyC);
+}
+
+function updateInfo(vx, vy) {
+  const disc = bVal*bVal - 4*aVal*cVal;
+  document.getElementById('hmax').textContent = vy.toFixed(2);
+  document.getElementById('vx').textContent = vx.toFixed(2);
+  document.getElementById('hi').textContent = cVal.toFixed(1);
+
+  // Alcance (positive root)
+  let alcance = '—';
+  if (disc >= 0) {
+    const r1 = (-bVal + Math.sqrt(disc)) / (2*aVal);
+    const r2 = (-bVal - Math.sqrt(disc)) / (2*aVal);
+    const pos = Math.max(r1, r2);
+    if (pos > 0) alcance = pos.toFixed(2);
+  }
+  document.getElementById('alc').textContent = alcance;
+
+  // Discriminant
+  const dEl = document.getElementById('discVal');
+  const rEl = document.getElementById('rootsInfo');
+  dEl.textContent = disc.toFixed(2);
+  if (disc > 0) {
+    dEl.className = 'disc-val disc-positive';
+    rEl.textContent = '2 raíces reales → la pelota toca el suelo';
+  } else if (disc === 0) {
+    dEl.className = 'disc-val disc-zero';
+    rEl.textContent = '1 raíz → toca el suelo en un punto';
+  } else {
+    dEl.className = 'disc-val disc-negative';
+    rEl.textContent = 'Sin raíces reales → no toca el suelo';
+  }
+}
+
+function updateFormula() {
+  const fa = document.getElementById('fa');
+  const fb = document.getElementById('fb');
+  const fc = document.getElementById('fc');
+  fa.textContent = aVal.toFixed(1);
+  fb.textContent = (bVal >= 0 ? '' : '') + bVal.toFixed(1);
+  fc.textContent = cVal.toFixed(1);
+}
+
+function animateBall() {
+  if (animId) cancelAnimationFrame(animId);
+  ball.style.display = 'block';
+
+  const { xMin, xMax } = getRange();
+  const vxC = -bVal / (2*aVal);
+  const vyC = f(vxC);
+  const yMin = 0;
+  const yMax = Math.max(vyC * 1.25, cVal * 1.2, 5);
+
+  const rect = wrapper.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+  const dpr = window.devicePixelRatio;
+
+  // Mismos márgenes que draw() pero en píxeles CSS (sin DPR)
+  const PAD_LEFT = 52;
+  const PAD_BOTTOM = 36;
+  const PAD_TOP = 20;
+  const PAD_RIGHT = 20;
+  const plotW = W - PAD_LEFT - PAD_RIGHT;
+  const plotH = H - PAD_TOP - PAD_BOTTOM;
+
+  const toX = x => PAD_LEFT + ((x - xMin) / (xMax - xMin)) * plotW;
+  const toY = y => PAD_TOP + plotH - ((y - yMin) / (yMax - yMin)) * plotH;
+
+  const disc = bVal*bVal - 4*aVal*cVal;
+  let xEnd = xMax * 0.9;
+  if (disc >= 0) {
+    const r1 = (-bVal + Math.sqrt(disc)) / (2*aVal);
+    const r2 = (-bVal - Math.sqrt(disc)) / (2*aVal);
+    const pos = Math.max(r1, r2);
+    if (pos > 0) xEnd = pos;
+  }
+
+  const duration = 1800;
+  let start = null;
+  const xStart = 0;
+
+  function step(ts) {
+    if (!start) start = ts;
+    const progress = Math.min((ts - start) / duration, 1);
+    const x = xStart + progress * (xEnd - xStart);
+    const y = f(x);
+    if (y < 0) { ball.style.display = 'none'; return; }
+
+    const bx = toX(x) - 11;
+    const by = toY(y) - 11;
+    ball.style.left = bx + 'px';
+    ball.style.top = by + 'px';
+
+    if (progress < 1) animId = requestAnimationFrame(step);
+    else setTimeout(() => { ball.style.display = 'none'; }, 300);
+  }
+
+  animId = requestAnimationFrame(step);
+}
+
+// Sliders
+function updateSlider(slider, val, color) {
+  const min = parseFloat(slider.min), max = parseFloat(slider.max);
+  const pct = ((val - min) / (max - min)) * 100;
+  slider.style.setProperty('--pct', pct + '%');
+}
+
+const sa = document.getElementById('sa');
+const sb = document.getElementById('sb');
+const sc = document.getElementById('sc');
+
+sa.addEventListener('input', () => {
+  aVal = parseFloat(sa.value);
+  document.getElementById('va').textContent = aVal.toFixed(1);
+  updateSlider(sa, aVal);
+  updateFormula(); draw();
+});
+
+sb.addEventListener('input', () => {
+  bVal = parseFloat(sb.value);
+  document.getElementById('vb').textContent = bVal.toFixed(1);
+  updateSlider(sb, bVal);
+  updateFormula(); draw();
+});
+
+sc.addEventListener('input', () => {
+  cVal = parseFloat(sc.value);
+  document.getElementById('vc').textContent = cVal.toFixed(1);
+  updateSlider(sc, cVal);
+  updateFormula(); draw();
+});
+
+document.getElementById('btnLaunch').addEventListener('click', () => {
+  animateBall();
+});
+
+window.addEventListener('resize', resize);
+resize();
+updateFormula();
+draw();
+
+// Init slider styles
+updateSlider(sa, aVal);
+updateSlider(sb, bVal);
+updateSlider(sc, cVal);
+</script>
+</body>
+</html>

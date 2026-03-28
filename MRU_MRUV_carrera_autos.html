@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carrera de Autos — MRU vs MRUV</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f0e8;
+    --surface: #eae5d8;
+    --card: #ffffff;
+    --dark: #1a1410;
+    --mru-color: #0055ff;
+    --mruv-color: #e8000d;
+    --accent: #f5a623;
+    --muted: #8a8070;
+    --border: #d4cfc2;
+    --grid: #e0dbd0;
+    --asphalt: #2a2520;
+    --line: #fff9e6;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--dark);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  overflow-y: auto;
+  }
+
+  /* Texture */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='1' height='1' x='0' y='0' fill='%23c8c0a8' opacity='0.3'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  header {
+    background: var(--dark);
+    padding: 1rem 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .logo span { color: #fff; }
+
+  .tag {
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border: 1px solid #3a3530;
+    padding: 0.25rem 0.8rem;
+    border-radius: 2px;
+  }
+
+  /* PISTA */
+  .track-section {
+    background: var(--asphalt);
+    padding: 1.5rem 2.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .track-bg {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(90deg, transparent, transparent 60px, rgba(255,255,255,0.02) 60px, rgba(255,255,255,0.02) 61px);
+  }
+
+  .finish-line {
+    position: absolute;
+    right: 2.5rem;
+    top: 0;
+    bottom: 0;
+    width: 16px;
+    background: repeating-linear-gradient(180deg, #fff 0px, #fff 8px, #000 8px, #000 16px);
+    opacity: 0.6;
+  }
+
+  .lanes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .lane {
+    height: 60px;
+    background: rgba(255,255,255,0.04);
+    border: 1px dashed rgba(255,255,255,0.1);
+    border-radius: 4px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+    overflow: hidden;
+  }
+
+  .lane::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: repeating-linear-gradient(90deg, rgba(255,255,255,0.15) 0, rgba(255,255,255,0.15) 12px, transparent 12px, transparent 24px);
+  }
+
+  .car {
+    position: absolute;
+    left: 0%;
+    width: 56px;
+    height: 36px;
+    transition: none;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+    z-index: 2;
+  }
+
+  .lane-label {
+    position: absolute;
+    right: 1rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.5;
+    color: #fff;
+  }
+
+  /* WINNER BANNER */
+  .winner-banner {
+    display: none;
+    background: var(--accent);
+    color: var(--dark);
+    text-align: center;
+    padding: 0.6rem;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  /* TABS (visible solo en pantallas chicas) */
+  .tabs {
+    display: none;
+    background: var(--surface);
+    border-bottom: 2px solid var(--border);
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: none;
+    background: transparent;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+  }
+  .tab-btn.active {
+    color: var(--dark);
+    border-bottom-color: var(--accent);
+  }
+
+  /* MAIN CONTENT */
+  .content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+    gap: 0;
+    padding: 0;
+  }
+
+  /* CONTROLS */
+  .controls {
+    padding: 2rem 2rem;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    min-width: 0;
+  }
+
+  .section-title {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+
+  .car-control {
+    border-radius: 10px;
+    padding: 1.4rem;
+    border: 2px solid transparent;
+  }
+
+  .car-control.mru {
+    background: rgba(0, 85, 255, 0.06);
+    border-color: rgba(0, 85, 255, 0.2);
+  }
+
+  .car-control.mruv {
+    background: rgba(232, 0, 13, 0.06);
+    border-color: rgba(232, 0, 13, 0.2);
+  }
+
+  .car-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .car-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 3px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  .badge-mru { background: var(--mru-color); color: #fff; }
+  .badge-mruv { background: var(--mruv-color); color: #fff; }
+
+  .car-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--dark);
+    letter-spacing: 0.05em;
+  }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .slider-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    min-width: 90px;
+  }
+
+  .slider-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    min-width: 70px;
+    text-align: right;
+  }
+
+  .mru .slider-value { color: var(--mru-color); }
+  .mruv .slider-value { color: var(--mruv-color); }
+
+  input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 3px;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .mru input[type=range] { background: linear-gradient(to right, var(--mru-color) var(--pct, 50%), var(--border) var(--pct, 50%)); }
+  .mruv input[type=range] { background: linear-gradient(to right, var(--mruv-color) var(--pct, 50%), var(--border) var(--pct, 50%)); }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--dark);
+    border: 2px solid white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    cursor: pointer;
+  }
+
+  .formula-display {
+    background: var(--surface);
+    border-radius: 6px;
+    padding: 0.6rem 0.9rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--dark);
+    border: 1px solid var(--border);
+  }
+
+  .btn-race {
+    background: var(--dark);
+    color: var(--accent);
+    border: none;
+    border-radius: 6px;
+    padding: 1rem 2rem;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    width: 100%;
+  }
+
+  .btn-race:hover {
+    background: #2a2520;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    transform: translateY(-1px);
+  }
+
+  /* GRAPH AREA */
+  .graph-area {
+    padding: 2rem 1.5rem;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .graph-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .graph-title {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .graph-legend {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.75rem;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .gl-item { display: flex; align-items: center; gap: 0.4rem; color: var(--muted); }
+  .gl-line { width: 20px; height: 3px; border-radius: 2px; }
+
+  canvas { width: 100%; min-height: 220px; border-radius: 8px; border: 1px solid var(--border); display: block; }
+
+  /* Stats table */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .stat-cell {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.7rem;
+    text-align: center;
+  }
+
+  .stat-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.2rem; }
+  .stat-val { font-family: 'Space Mono', monospace; font-size: 0.85rem; font-weight: 700; color: var(--dark); }
+
+  @media (max-width: 860px) {
+    .tabs { display: flex; }
+    .content { grid-template-columns: 1fr; }
+    .controls { border-right: none; border-bottom: none; padding: 1.2rem 1rem; gap: 1.2rem; }
+    .graph-area { padding: 1.2rem 1rem; }
+    .controls.hidden, .graph-area.hidden { display: none; }
+  }
+
+  @media (max-width: 700px) {
+    header { padding: 0.8rem 1rem; flex-wrap: wrap; gap: 0.4rem; }
+    .logo { font-size: 1.1rem; }
+    .tag { font-size: 0.62rem; padding: 0.2rem 0.5rem; letter-spacing: 0.08em; }
+    .track-section { padding: 1rem; }
+    .lane { height: 50px; }
+    .lane-label { display: none; }
+    .car { width: 44px; height: 28px; }
+    .winner-banner { font-size: 0.85rem; padding: 0.5rem 0.8rem; letter-spacing: 0.06em; }
+    .car-control { padding: 1rem; }
+    .slider-row { gap: 0.6rem; }
+    .slider-name { min-width: 75px; font-size: 0.68rem; }
+    .slider-value { min-width: 55px; font-size: 0.78rem; }
+    .formula-display { font-size: 0.72rem; padding: 0.5rem 0.7rem; word-break: break-all; }
+    .graph-header { flex-direction: column; align-items: flex-start; gap: 0.4rem; }
+    .graph-legend { gap: 0.7rem; font-size: 0.68rem; flex-wrap: wrap; }
+    .stats-grid { gap: 0.4rem; }
+    .stat-cell { padding: 0.5rem 0.3rem; }
+    .stat-label { font-size: 0.58rem; }
+    .stat-val { font-size: 0.75rem; }
+    .btn-race { padding: 0.85rem 1rem; font-size: 0.95rem; }
+  }
+
+  @media (min-width: 701px) and (max-width: 1000px) {
+    .content { grid-template-columns: 1fr; }
+    .controls { border-right: none; border-bottom: 1px solid var(--border); }
+    .graph-area { padding: 1.5rem 2rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🏎 <span>RACE</span>PHYSICS</div>
+  <div class="tag">MRU vs MRUV · 1° Secundaria · Cinemática</div>
+</header>
+
+<!-- PISTA -->
+<div class="track-section">
+  <div class="track-bg"></div>
+  <div class="finish-line"></div>
+  <div class="lanes">
+    <div class="lane" id="laneMru">
+      <svg class="car" id="carMru" viewBox="0 0 56 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="10" width="52" height="18" rx="5" fill="#0055ff"/>
+        <rect x="8" y="5" width="30" height="14" rx="3" fill="#3388ff"/>
+        <rect x="10" y="7" width="12" height="8" rx="1" fill="#aaccff" opacity="0.8"/>
+        <rect x="24" y="7" width="12" height="8" rx="1" fill="#aaccff" opacity="0.8"/>
+        <circle cx="10" cy="28" r="6" fill="#1a1410"/>
+        <circle cx="10" cy="28" r="3.5" fill="#555"/>
+        <circle cx="46" cy="28" r="6" fill="#1a1410"/>
+        <circle cx="46" cy="28" r="3.5" fill="#555"/>
+        <rect x="48" y="14" width="8" height="3" rx="1" fill="#f5a623" opacity="0.8"/>
+        <text x="14" y="21" font-family="Rajdhani" font-size="6" font-weight="700" fill="white" letter-spacing="0.5">MRU</text>
+      </svg>
+      <div class="lane-label">velocidad constante</div>
+    </div>
+    <div class="lane" id="laneMruv">
+      <svg class="car" id="carMruv" viewBox="0 0 56 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="10" width="52" height="18" rx="5" fill="#e8000d"/>
+        <rect x="8" y="5" width="30" height="14" rx="3" fill="#ff4444"/>
+        <rect x="10" y="7" width="12" height="8" rx="1" fill="#ffaaaa" opacity="0.8"/>
+        <rect x="24" y="7" width="12" height="8" rx="1" fill="#ffaaaa" opacity="0.8"/>
+        <circle cx="10" cy="28" r="6" fill="#1a1410"/>
+        <circle cx="10" cy="28" r="3.5" fill="#555"/>
+        <circle cx="46" cy="28" r="6" fill="#1a1410"/>
+        <circle cx="46" cy="28" r="3.5" fill="#555"/>
+        <rect x="48" y="14" width="8" height="3" rx="1" fill="#f5a623" opacity="0.8"/>
+        <text x="12" y="21" font-family="Rajdhani" font-size="5.5" font-weight="700" fill="white" letter-spacing="0.5">MRUV</text>
+      </svg>
+      <div class="lane-label">aceleración constante</div>
+    </div>
+  </div>
+</div>
+<div class="winner-banner" id="winnerBanner">🏆 &nbsp; <span id="winnerText"></span></div>
+
+<!-- CONTENT -->
+<div class="tabs" id="tabBar">
+  <button class="tab-btn active" onclick="switchTab('controls')">⚙️ Configurar</button>
+  <button class="tab-btn" onclick="switchTab('graph')">📈 Gráfico</button>
+</div>
+<div class="content">
+  <!-- CONTROLES -->
+  <div class="controls">
+    <div>
+      <div class="section-title">Configurá los autos</div>
+
+      <!-- MRU -->
+      <div class="car-control mru">
+        <div class="car-header">
+          <div class="car-badge badge-mru">MRU</div>
+          <div class="car-name">Auto Azul</div>
+        </div>
+        <div class="slider-row">
+          <span class="slider-name">Velocidad v₀</span>
+          <input type="range" id="vMru" min="1" max="20" step="0.5" value="8">
+          <span class="slider-value" id="vMruVal">8 m/s</span>
+        </div>
+        <div class="formula-display" id="fMru">x(t) = 8 · t</div>
+        <div style="font-size:0.75rem; color:var(--muted); margin-top:0.6rem; line-height:1.5;">
+          Posición aumenta de forma lineal. La gráfica es <strong>una recta</strong>.
+        </div>
+      </div>
+
+      <div style="height: 1.2rem;"></div>
+
+      <!-- MRUV -->
+      <div class="car-control mruv">
+        <div class="car-header">
+          <div class="car-badge badge-mruv">MRUV</div>
+          <div class="car-name">Auto Rojo</div>
+        </div>
+        <div class="slider-row">
+          <span class="slider-name">Vel. inicial v₀</span>
+          <input type="range" id="v0Mruv" min="0" max="10" step="0.5" value="2">
+          <span class="slider-value" id="v0MruvVal">2 m/s</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-name">Aceleración a</span>
+          <input type="range" id="aMruv" min="0.5" max="8" step="0.5" value="3">
+          <span class="slider-value" id="aMruvVal">3 m/s²</span>
+        </div>
+        <div class="formula-display" id="fMruv">x(t) = 2t + ½ · 3 · t²</div>
+        <div style="font-size:0.75rem; color:var(--muted); margin-top:0.6rem; line-height:1.5;">
+          Posición crece como parábola. La gráfica es <strong>una curva</strong> → eventualmente supera la recta.
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <!-- Stats -->
+      <div class="section-title">Datos de la carrera</div>
+      <div class="stats-grid">
+        <div class="stat-cell">
+          <div class="stat-label">Duración</div>
+          <div class="stat-val" id="statTime">—</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Se cruzan en</div>
+          <div class="stat-val" id="statCross">—</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Dist. recorrida</div>
+          <div class="stat-val" id="statDist">—</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-race" id="btnRace">🏁 ¡Largar!</button>
+  </div>
+
+  <!-- GRÁFICO -->
+  <div class="graph-area">
+    <div class="graph-header">
+      <div class="graph-title">Gráfico Posición — Tiempo</div>
+      <div class="graph-legend">
+        <div class="gl-item"><div class="gl-line" style="background:var(--mru-color)"></div>MRU (recta)</div>
+        <div class="gl-item"><div class="gl-line" style="background:var(--mruv-color)"></div>MRUV (curva)</div>
+      </div>
+    </div>
+    <canvas id="graph" height="280"></canvas>
+    <div style="font-size:0.75rem; color:var(--muted); text-align:center; font-family:'Space Mono', monospace;">
+      El punto donde se cruzan las curvas es donde el auto rojo supera al azul
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('graph');
+const ctx = canvas.getContext('2d');
+
+let vMru = 8, v0Mruv = 2, aMruv = 3;
+let animId = null;
+let racing = false;
+
+function xMru(t) { return vMru * t; }
+function xMruv(t) { return v0Mruv * t + 0.5 * aMruv * t * t; }
+
+// Find time MRUV overtakes MRU: v0*t + 0.5*a*t² = vMru*t
+// 0.5*a*t² + (v0-vMru)*t = 0
+// t(0.5*a*t + (v0-vMru)) = 0
+// t = (vMru - v0) / (0.5*a) (non-zero solution)
+function crossTime() {
+  const t = (vMru - v0Mruv) / (0.5 * aMruv);
+  return t > 0 ? t : null;
+}
+
+function getEndTime() {
+  // Race to 200m
+  const dist = 200;
+  // MRU: t = 200/vMru
+  const tMru = dist / vMru;
+  // MRUV: 0.5*a*t² + v0*t - 200 = 0
+  const a2 = 0.5 * aMruv, b2 = v0Mruv, c2 = -dist;
+  const disc = b2*b2 - 4*a2*c2;
+  const tMruv = (-b2 + Math.sqrt(disc)) / (2*a2);
+  return Math.min(tMru, tMruv) * 1.1;
+}
+
+function drawGraph(tCurrent) {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const tEnd = getEndTime();
+  const xEnd = Math.max(xMru(tEnd), xMruv(tEnd)) * 1.05;
+  const tShow = tCurrent !== undefined ? tCurrent : tEnd;
+
+  const toX = t => (t / tEnd) * (W - 60) + 40;
+  const toY = x => H - 30 - (x / xEnd) * (H - 50);
+
+  // Grid
+  ctx.strokeStyle = '#e8e0d0';
+  ctx.lineWidth = 1;
+  const tSteps = 5, xSteps = 5;
+  for (let i = 0; i <= tSteps; i++) {
+    const t = (i / tSteps) * tEnd;
+    ctx.beginPath(); ctx.moveTo(toX(t), 30); ctx.lineTo(toX(t), H - 30); ctx.stroke();
+    ctx.fillStyle = '#9a9080';
+    ctx.font = `${10 * window.devicePixelRatio}px Space Mono`;
+    ctx.textAlign = 'center';
+    ctx.fillText(t.toFixed(1) + 's', toX(t), H - 12);
+  }
+  for (let i = 0; i <= xSteps; i++) {
+    const x = (i / xSteps) * xEnd;
+    ctx.beginPath(); ctx.moveTo(40, toY(x)); ctx.lineTo(W - 20, toY(x)); ctx.stroke();
+    ctx.fillStyle = '#9a9080';
+    ctx.textAlign = 'right';
+    ctx.fillText(Math.round(x) + 'm', 36, toY(x) + 4);
+  }
+
+  // Axes
+  ctx.strokeStyle = '#6a6050';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(40, 20); ctx.lineTo(40, H - 28); ctx.lineTo(W - 15, H - 28); ctx.stroke();
+
+  // Axis labels
+  ctx.fillStyle = '#6a6050';
+  ctx.font = `bold ${11 * window.devicePixelRatio}px Rajdhani`;
+  ctx.textAlign = 'center';
+  ctx.fillText('Tiempo (s)', W / 2, H - 2);
+  ctx.save();
+  ctx.translate(14, H / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('Posición (m)', 0, 0);
+  ctx.restore();
+
+  // Cross point
+  const tc = crossTime();
+  if (tc && tc <= tEnd) {
+    const cx = toX(tc), cy = toY(xMru(tc));
+    ctx.beginPath();
+    ctx.arc(cx, cy, 6 * window.devicePixelRatio, 0, Math.PI * 2);
+    ctx.fillStyle = '#f5a623';
+    ctx.fill();
+    ctx.strokeStyle = '#1a1410';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = '#8a6000';
+    ctx.font = `${9.5 * window.devicePixelRatio}px Space Mono`;
+    ctx.textAlign = 'left';
+    ctx.fillText(`t=${tc.toFixed(1)}s`, cx + 8, cy - 6);
+  }
+
+  // MRU line
+  ctx.beginPath();
+  ctx.strokeStyle = '#0055ff';
+  ctx.lineWidth = 2.5 * window.devicePixelRatio;
+  let first = true;
+  for (let ti = 0; ti <= tShow; ti += tEnd / 300) {
+    const px = toX(ti), py = toY(xMru(ti));
+    if (first) { ctx.moveTo(px, py); first = false; } else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+
+  // MRUV curve
+  ctx.beginPath();
+  ctx.strokeStyle = '#e8000d';
+  ctx.lineWidth = 2.5 * window.devicePixelRatio;
+  first = true;
+  for (let ti = 0; ti <= tShow; ti += tEnd / 300) {
+    const px = toX(ti), py = toY(xMruv(ti));
+    if (first) { ctx.moveTo(px, py); first = false; } else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+
+  // Current position dots
+  if (tCurrent !== undefined) {
+    const dotMru = { x: toX(tCurrent), y: toY(xMru(tCurrent)) };
+    const dotMruv = { x: toX(tCurrent), y: toY(xMruv(tCurrent)) };
+    [[dotMru, '#0055ff'], [dotMruv, '#e8000d']].forEach(([dot, color]) => {
+      ctx.beginPath();
+      ctx.arc(dot.x, dot.y, 5 * window.devicePixelRatio, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
+  }
+}
+
+function updateFormulas() {
+  document.getElementById('fMru').textContent = `x(t) = ${vMru} · t`;
+  document.getElementById('fMruv').textContent = `x(t) = ${v0Mruv}t + ½ · ${aMruv} · t²`;
+}
+
+function updateStats() {
+  const tEnd = getEndTime();
+  const tc = crossTime();
+  const dist = Math.max(xMru(tEnd / 1.1), xMruv(tEnd / 1.1));
+
+  document.getElementById('statTime').textContent = (tEnd / 1.1).toFixed(1) + ' s';
+  document.getElementById('statCross').textContent = tc ? `t = ${tc.toFixed(1)} s` : 'No se cruzan';
+  document.getElementById('statDist').textContent = Math.round(dist) + ' m';
+}
+
+function animateRace() {
+  if (animId) { cancelAnimationFrame(animId); }
+
+  const trackW = document.querySelector('.track-section').offsetWidth - 5 * 16; // approx finish
+  const carMru = document.getElementById('carMru');
+  const carMruv = document.getElementById('carMruv');
+  const banner = document.getElementById('winnerBanner');
+  const winnerText = document.getElementById('winnerText');
+
+  banner.style.display = 'none';
+  carMru.style.left = '0%';
+  carMruv.style.left = '0%';
+
+  const tTotal = getEndTime() / 1.1;
+  const dist = 200;
+  const duration = 3500;
+  let start = null;
+
+  function step(ts) {
+    if (!start) start = ts;
+    const elapsed = ts - start;
+    const t = (elapsed / duration) * tTotal;
+    const tClamped = Math.min(t, tTotal);
+
+    const xM = xMru(tClamped);
+    const xMV = xMruv(tClamped);
+    const maxX = Math.max(xMru(tTotal), xMruv(tTotal));
+
+    const pMru = Math.min((xM / maxX) * 88, 88);
+    const pMruv = Math.min((xMV / maxX) * 88, 88);
+
+    carMru.style.left = pMru + '%';
+    carMruv.style.left = pMruv + '%';
+
+    drawGraph(tClamped);
+
+    if (elapsed < duration) {
+      animId = requestAnimationFrame(step);
+    } else {
+      // Show winner
+      const finalMru = xMru(tTotal);
+      const finalMruv = xMruv(tTotal);
+      if (Math.abs(finalMru - finalMruv) < 1) {
+        winnerText.textContent = '¡Empate!';
+      } else if (finalMruv > finalMru) {
+        winnerText.textContent = '🔴 Gana el MRUV — La aceleración venció a la velocidad constante';
+      } else {
+        winnerText.textContent = '🔵 Gana el MRU — ¡La velocidad constante fue suficiente!';
+      }
+      banner.style.display = 'block';
+    }
+  }
+
+  animId = requestAnimationFrame(step);
+}
+
+// Sliders
+function setSliderPct(el, val) {
+  const min = parseFloat(el.min), max = parseFloat(el.max);
+  const pct = ((val - min) / (max - min)) * 100;
+  el.style.setProperty('--pct', pct + '%');
+}
+
+document.getElementById('vMru').addEventListener('input', e => {
+  vMru = parseFloat(e.target.value);
+  document.getElementById('vMruVal').textContent = vMru + ' m/s';
+  setSliderPct(e.target, vMru);
+  updateFormulas(); updateStats(); drawGraph();
+});
+
+document.getElementById('v0Mruv').addEventListener('input', e => {
+  v0Mruv = parseFloat(e.target.value);
+  document.getElementById('v0MruvVal').textContent = v0Mruv + ' m/s';
+  setSliderPct(e.target, v0Mruv);
+  updateFormulas(); updateStats(); drawGraph();
+});
+
+document.getElementById('aMruv').addEventListener('input', e => {
+  aMruv = parseFloat(e.target.value);
+  document.getElementById('aMruvVal').textContent = aMruv + ' m/s²';
+  setSliderPct(e.target, aMruv);
+  updateFormulas(); updateStats(); drawGraph();
+});
+
+document.getElementById('btnRace').addEventListener('click', () => {
+  animateRace();
+});
+
+function resize() {
+  canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+  canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+  drawGraph();
+}
+
+window.addEventListener('resize', resize);
+
+// Init
+setSliderPct(document.getElementById('vMru'), vMru);
+setSliderPct(document.getElementById('v0Mruv'), v0Mruv);
+setSliderPct(document.getElementById('aMruv'), aMruv);
+
+updateFormulas();
+updateStats();
+setTimeout(resize, 50);
+
+// Tab switching para pantallas pequeñas
+function switchTab(tab) {
+  const controls = document.querySelector('.controls');
+  const graphArea = document.querySelector('.graph-area');
+  const btns = document.querySelectorAll('.tab-btn');
+  if (tab === 'controls') {
+    controls.classList.remove('hidden');
+    graphArea.classList.add('hidden');
+    btns[0].classList.add('active');
+    btns[1].classList.remove('active');
+  } else {
+    graphArea.classList.remove('hidden');
+    controls.classList.add('hidden');
+    btns[1].classList.add('active');
+    btns[0].classList.remove('active');
+    setTimeout(resize, 50);
+  }
+}
+
+</script>
+</body>
+</html>
