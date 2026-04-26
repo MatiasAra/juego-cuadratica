@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#070b14">
+<title>Simulador Artemis II</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Inter:wght@400;500;600&display=swap');
+:root {
+  --bg:#070b14; --bg2:#0d1526; --bg3:#111928;
+  --purple:#534AB7; --purple-l:#7F77DD; --purple-pale:rgba(83,74,183,.13);
+  --teal:#1D9E75; --amber:#d29922; --danger:#e05252;
+  --text:#e6edf3; --muted:#7d8590;
+  --border:rgba(255,255,255,.09); --border2:rgba(255,255,255,.15);
+  --r:10px; --rl:16px;
+  --font-hud:'Orbitron',monospace; --font:'Inter',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100%;}
+body{display:flex;justify-content:center;}
+.app{width:100%;max-width:680px;padding:1.2rem 1rem 3rem;}
+
+/* INTRO */
+.intro{text-align:center;padding:1.5rem 0;}
+.patch{width:150px;height:150px;margin:0 auto 1.5rem;display:block;}
+.intro h1{font-family:var(--font-hud);font-size:18px;font-weight:700;letter-spacing:.06em;color:#fff;margin-bottom:.4rem;}
+.tagline{font-family:var(--font-hud);font-size:9px;letter-spacing:.14em;color:var(--purple-l);margin-bottom:1.5rem;text-transform:uppercase;}
+.brief{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);padding:1.3rem;text-align:left;margin-bottom:1.3rem;}
+.brief p{font-size:13px;color:#9ab;line-height:1.7;margin-bottom:.7rem;}
+.brief p:last-child{margin-bottom:0;}
+.mission-note{background:var(--purple-pale);border-left:3px solid var(--purple);border-radius:0 var(--r) var(--r) 0;padding:.85rem 1rem;font-size:12px;color:#bcd;line-height:1.65;}
+.mission-note b{color:var(--purple-l);}
+
+/* STAGE */
+.stage{position:relative;height:240px;background:linear-gradient(180deg,#020610 0%,#080f1e 100%);border-radius:var(--rl);overflow:hidden;margin-bottom:1.1rem;border:1px solid var(--border);}
+.star{position:absolute;border-radius:50%;background:#fff;animation:twinkle var(--d,3s) ease-in-out infinite alternate;}
+@keyframes twinkle{0%{opacity:var(--a,.4)}100%{opacity:calc(var(--a,.4)*.25)}}
+.ground{position:absolute;bottom:0;left:-20%;width:140%;height:72px;background:radial-gradient(ellipse 80% 100% at 50% 100%,#194d2a,#0a2214);border-top:2px solid #2a7a40;border-radius:50% 50% 0 0/40% 40% 0 0;}
+.pad{position:absolute;bottom:62px;left:calc(50% - 16px);width:32px;height:11px;background:#5a6a7a;border-radius:3px 3px 0 0;transition:opacity .5s;}
+.fpole{position:absolute;bottom:62px;left:calc(50% + 20px);width:2px;height:34px;background:#8b9eb0;transition:opacity .5s;}
+.flag-wrap{position:absolute;top:0;left:2px;width:26px;height:18px;transform-origin:left center;animation:wave 1.5s ease-in-out infinite alternate;overflow:hidden;border-radius:0 2px 2px 0;}
+@keyframes wave{0%{transform:skewY(0) scaleX(1)}100%{transform:skewY(-7deg) scaleX(.83)}}
+.moon{position:absolute;width:50px;height:50px;right:8%;top:9%;border-radius:50%;background:radial-gradient(circle at 38% 34%,#e8ecef,#9aa0a8);transition:opacity .7s;}
+.moon::before{content:'';position:absolute;width:10px;height:10px;top:24%;left:20%;border-radius:50%;background:rgba(0,0,0,.14);}
+.moon::after{content:'';position:absolute;width:7px;height:7px;top:46%;left:57%;border-radius:50%;background:rgba(0,0,0,.11);}
+#rocket{position:absolute;width:24px;height:46px;transition:none;}
+#rocket .nose{position:absolute;top:0;left:50%;transform:translateX(-50%);width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:14px solid #b0bac4;}
+#rocket .body{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:18px;height:20px;background:#dde4ed;border-radius:1px;}
+#rocket .win{position:absolute;top:4px;left:50%;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;background:#4db8ff;opacity:.85;}
+#rocket .noz{position:absolute;top:34px;left:50%;transform:translateX(-50%);width:12px;height:7px;background:#7d8590;border-radius:0 0 4px 4px;}
+#rocket .fl{position:absolute;top:41px;left:50%;transform:translateX(-50%);width:10px;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:0 solid #ff8c00;opacity:0;transition:opacity .2s;}
+#rocket .finL{position:absolute;top:26px;left:-4px;width:0;height:0;border-right:9px solid #534AB7;border-top:5px solid transparent;border-bottom:7px solid transparent;}
+#rocket .finR{position:absolute;top:26px;right:-4px;width:0;height:0;border-left:9px solid #534AB7;border-top:5px solid transparent;border-bottom:7px solid transparent;}
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:rgba(7,11,20,.84);opacity:0;transition:opacity .4s;pointer-events:none;z-index:10;}
+.overlay.show{opacity:1;}
+.ov-icon{font-size:42px;}
+.ov-title{font-family:var(--font-hud);font-size:13px;font-weight:600;color:#fff;text-align:center;padding:0 1.5rem;}
+.ov-sub{font-size:12px;color:#9ab;text-align:center;padding:0 1.5rem;line-height:1.5;}
+
+/* HUD */
+.hud{display:flex;gap:5px;margin-bottom:1.1rem;}
+.hud-dot{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.1);transition:background .3s;}
+.hud-dot.active{background:var(--purple-l);}
+.hud-dot.done{background:var(--teal);}
+.phase-row{display:flex;align-items:center;gap:8px;margin-bottom:.9rem;flex-wrap:wrap;}
+.badge{font-family:var(--font-hud);font-size:9px;letter-spacing:.08em;border:1px solid var(--purple);color:var(--purple-l);border-radius:6px;padding:3px 9px;}
+.phase-title{font-family:var(--font-hud);font-size:14px;font-weight:600;color:#fff;letter-spacing:.03em;}
+
+/* SCIENCE */
+.sci{background:var(--bg2);border-left:3px solid var(--purple);border-radius:0 var(--r) var(--r) 0;padding:.9rem 1.1rem;margin-bottom:1.1rem;}
+.sci .lbl{font-family:var(--font-hud);font-size:9px;letter-spacing:.12em;color:var(--purple-l);margin-bottom:6px;text-transform:uppercase;}
+.sci p{font-size:13px;color:#9ab;line-height:1.65;}
+.formula{background:rgba(0,0,0,.3);border:1px solid var(--border2);border-radius:var(--r);padding:8px 12px;margin-top:8px;font-family:var(--font-hud);font-size:11px;}
+.formula div{color:var(--teal);margin-bottom:4px;}
+.formula div:last-child{margin-bottom:0;}
+
+/* INPUTS — táctiles */
+.inputs{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);padding:1.1rem;margin-bottom:.85rem;}
+.inputs h3{font-family:var(--font-hud);font-size:9px;letter-spacing:.1em;color:var(--muted);margin-bottom:.85rem;text-transform:uppercase;}
+.row{display:flex;align-items:center;gap:6px;margin-bottom:.75rem;}
+.row:last-child{margin-bottom:0;}
+.row label{font-size:12px;color:#99a;flex:1;line-height:1.4;}
+.row input{
+  width:100px;padding:9px 10px;font-size:14px;
+  font-family:var(--font-hud);border:1px solid var(--border2);
+  border-radius:var(--r);background:rgba(0,0,0,.35);color:var(--text);
+  text-align:right;transition:border-color .2s;
+  -webkit-appearance:none;
+}
+.row input:focus{outline:none;border-color:var(--purple-l);}
+.row input[readonly]{color:var(--muted);cursor:default;background:transparent;border-color:transparent;}
+.row input.input-ok{border-color:var(--teal);}
+.row input.input-close{border-color:var(--amber);}
+.row input.input-err{border-color:var(--danger);}
+.row .unit{font-size:10px;color:var(--muted);width:48px;font-family:var(--font-hud);}
+.divider{border:none;border-top:1px dashed var(--border2);margin:.85rem 0;}
+.hint{font-size:12px;color:var(--muted);text-align:center;padding:5px 0;min-height:20px;font-style:italic;}
+.hint.err{color:var(--danger);}
+.hint.ok{color:var(--teal);}
+.hint.warn{color:var(--amber);}
+
+/* FEEDBACK INLINE */
+.feedback-row{font-size:11px;padding:3px 0 6px 0;min-height:18px;font-family:var(--font-hud);}
+.fb-ok{color:var(--teal);}
+.fb-close{color:var(--amber);}
+.fb-err{color:var(--danger);}
+
+.btn{width:100%;padding:13px;font-size:12px;font-weight:600;font-family:var(--font-hud);letter-spacing:.08em;cursor:pointer;border-radius:var(--rl);background:var(--purple);color:#fff;border:none;text-transform:uppercase;transition:all .2s;min-height:48px;}
+.btn:hover{background:#6259c8;}
+.btn:active{transform:scale(.98);}
+.btn:disabled{background:rgba(255,255,255,.07);color:var(--muted);cursor:not-allowed;transform:none;}
+.reveal{display:none;background:var(--bg2);border-left:3px solid var(--muted);border-radius:0 var(--r) var(--r) 0;padding:1rem 1.1rem;margin-bottom:1rem;font-size:13px;color:#9ab;line-height:1.6;}
+.reveal.ok{border-color:var(--teal);}
+.reveal.warn{border-color:var(--amber);}
+.reveal.fail{border-color:var(--danger);}
+.reveal b{color:var(--text);font-weight:600;}
+.steps{margin-top:10px;padding:9px 12px;background:rgba(0,0,0,.3);border-radius:var(--r);font-family:var(--font-hud);font-size:10px;line-height:1.9;border:1px dashed var(--border2);color:#778;}
+.steps b{color:#99a;font-family:var(--font);display:block;margin-bottom:5px;font-size:13px;}
+
+/* SCORE */
+.score-screen{text-align:center;padding:1.5rem 0;}
+.score-n{font-family:var(--font-hud);font-size:72px;font-weight:700;color:var(--purple-l);line-height:1;}
+.score-lbl{font-family:var(--font-hud);font-size:9px;letter-spacing:.12em;color:var(--muted);margin-top:5px;text-transform:uppercase;}
+.score-title{font-family:var(--font-hud);font-size:16px;font-weight:700;color:#fff;margin:12px 0 6px;}
+.score-sub{font-size:13px;color:#99a;line-height:1.6;max-width:460px;margin:0 auto 1.5rem;}
+
+/* Resumen de fases */
+.phases-summary{margin-bottom:1.5rem;}
+.ps-title{font-family:var(--font-hud);font-size:9px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;}
+.ps-row{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:10px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px;}
+.ps-icon{font-size:18px;flex-shrink:0;margin-top:2px;}
+.ps-body{flex:1;}
+.ps-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.ps-phase{font-size:12px;font-weight:600;color:var(--text);}
+.ps-pts{font-family:var(--font-hud);font-size:12px;}
+.ps-pts.ok{color:var(--teal);}
+.ps-pts.warn{color:var(--amber);}
+.ps-pts.fail{color:var(--danger);}
+.ps-corr{font-size:11px;color:#778;font-family:var(--font-hud);}
+.ps-your{font-size:11px;margin-top:2px;}
+.ps-your.ok{color:var(--teal);}
+.ps-your.warn{color:var(--amber);}
+.ps-your.fail{color:var(--danger);}
+
+.score-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:1.5rem;}
+.sc{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:.65rem .4rem;}
+.sc .sl{font-size:8px;font-family:var(--font-hud);letter-spacing:.06em;color:var(--muted);margin-bottom:4px;text-transform:uppercase;}
+.sc .sv{font-family:var(--font-hud);font-size:14px;font-weight:600;}
+.btn-sm{padding:12px 28px;font-size:11px;font-family:var(--font-hud);letter-spacing:.08em;cursor:pointer;border-radius:var(--rl);background:transparent;color:var(--text);border:1px solid var(--border2);text-transform:uppercase;transition:all .2s;min-height:48px;}
+.btn-sm:hover{background:var(--bg2);}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<script>
+/* ═══ PATCH SVG ═══ */
+function miniPatch(){
+  return `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+  <circle cx="100" cy="100" r="99" fill="#0d1526" stroke="#534AB7" stroke-width="4"/>
+  <circle cx="50" cy="150" r="28" fill="#1a5fa8"/>
+  <ellipse cx="44" cy="143" rx="11" ry="7" fill="#2d8a4e"/>
+  <circle cx="150" cy="58" r="22" fill="#c8cdd2"/>
+  <path d="M 72 138 Q 118 55 134 72" fill="none" stroke="#7F77DD" stroke-width="3" stroke-dasharray="6,5"/>
+</svg>`;
+}
+
+/* ═══ STARS ═══ */
+function makeStars(n){
+  return Array.from({length:n},()=>{
+    const s=(Math.random()*1.8+.4).toFixed(1);
+    const d=(Math.random()*3+2).toFixed(1);
+    const dl=(Math.random()*3).toFixed(1);
+    const a=(Math.random()*.5+.3).toFixed(2);
+    return `<div class="star" style="left:${(Math.random()*100).toFixed(1)}%;top:${(Math.random()*85).toFixed(1)}%;width:${s}px;height:${s}px;--a:${a};--d:${d}s;animation-delay:${dl}s"></div>`;
+  }).join('');
+}
+
+/* ═══ STAGE ═══ */
+function stageHTML(){
+  return `<div class="stage" id="stage">
+    ${makeStars(55)}
+    <div class="moon" id="moon"></div>
+    <div class="ground"></div>
+    <div class="pad" id="pad"></div>
+    <div class="fpole" id="fpole"><div class="flag-wrap">${miniPatch()}</div></div>
+    <div id="rocket">
+      <div class="finL"></div><div class="finR"></div>
+      <div class="nose"></div>
+      <div class="body"><div class="win"></div></div>
+      <div class="noz"></div>
+      <div class="fl" id="flame"></div>
+    </div>
+    <div class="overlay" id="overlay">
+      <div class="ov-icon" id="ov-icon"></div>
+      <div class="ov-title" id="ov-title"></div>
+      <div class="ov-sub" id="ov-sub"></div>
+    </div>
+  </div>`;
+}
+
+/* ═══ ROCKET ENGINE ═══ */
+let rkt={x:0,y:0,rot:0};
+function sw(){const s=document.getElementById('stage');return s?s.offsetWidth:400;}
+function sh(){const s=document.getElementById('stage');return s?s.offsetHeight:240;}
+
+function placeRocket(x,y,rot){
+  const el=document.getElementById('rocket');
+  if(!el)return;
+  el.style.left=x+'px';el.style.bottom=y+'px';
+  el.style.transform=`rotate(${rot}deg)`;
+  rkt={x,y,rot};
+}
+
+function animTo(tx,ty,trot,ms,done){
+  const el=document.getElementById('rocket');
+  if(!el){done&&done();return;}
+  const sx=rkt.x,sy=rkt.y,sr=rkt.rot;
+  let t0=null;
+  function ease(t){return 1-Math.pow(1-t,3);}
+  function step(ts){
+    if(!t0)t0=ts;
+    const t=Math.min((ts-t0)/ms,1),e=ease(t);
+    el.style.left=(sx+(tx-sx)*e)+'px';
+    el.style.bottom=(sy+(ty-sy)*e)+'px';
+    el.style.transform=`rotate(${sr+(trot-sr)*e}deg)`;
+    if(t<1)requestAnimationFrame(step);
+    else{rkt={x:tx,y:ty,rot:trot};done&&done();}
+  }
+  requestAnimationFrame(step);
+}
+
+function animFail(tx,ty,ms,done){
+  const el=document.getElementById('rocket');
+  if(!el){done&&done();return;}
+  const sx=rkt.x,sy=rkt.y;
+  let t0=null;
+  function step(ts){
+    if(!t0)t0=ts;
+    const t=Math.min((ts-t0)/ms,1);
+    const arc=Math.sin(t*Math.PI)*-80;
+    el.style.left=(sx+(tx-sx)*t)+'px';
+    el.style.bottom=(sy+(ty-sy)*t+arc)+'px';
+    el.style.transform=`rotate(${t*150}deg)`;
+    if(t<1)requestAnimationFrame(step);
+    else{rkt={x:tx,y:ty,rot:150};done&&done();}
+  }
+  requestAnimationFrame(step);
+}
+
+function flame(on){
+  const f=document.getElementById('flame');
+  if(f){f.style.opacity=on?1:0;f.style.borderBottomWidth=on?'20px':'0';}
+}
+function showOv(icon,title,sub){
+  ['ov-icon','ov-title','ov-sub'].forEach((id,i)=>{
+    const el=document.getElementById(id);if(el)el.textContent=[icon,title,sub][i];
+  });
+  const ov=document.getElementById('overlay');if(ov)ov.classList.add('show');
+}
+function hideOv(){const ov=document.getElementById('overlay');if(ov)ov.classList.remove('show');}
+
+/* ═══ FASES ═══ */
+let phases=[],cur=0,scores=[],answers_log=[],busy=false;
+function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+
+function buildPhases(){
+  const nudos=rnd(35,45);
+  const empuje=rnd(1500,2500);
+  const altitud=rnd(15,35)*10;
+  const posLuna=rnd(10,80);
+  const dias=rnd(3,6);
+  const angMin=rnd(50,56)/10;
+  const angMax=parseFloat((angMin+rnd(8,14)/10).toFixed(1)); // ventana más amplia
+
+  phases=[
+    // FASE 1 — Conversión de unidades
+    {
+      badge:'Fase 1 de 5', title:'Control Meteorológico',
+      sci:{
+        lbl:'Conversión de Unidades',
+        txt:'Antes de encender motores debemos confirmar el clima. La NASA mide el viento en Nudos, pero nuestros sensores locales están en km/h. Convertí el límite para saber si la ráfaga actual es segura para el despegue.',
+        fml:['Velocidad (km/h) = Nudos × 1.85']
+      },
+      given:[{l:'Límite de viento (NASA)',v:nudos,u:'Nudos'},{l:'Factor de conversión',v:'1.85',u:'km/h/Nudo'}],
+      qs:[{l:'Límite de ráfagas permitidas =',u:'km/h'}],
+      corr(){return [parseFloat((nudos*1.85).toFixed(1))];},
+      // Tolerancia: ±2 km/h exacto, ±5 parcial
+      judge(a){
+        const d=Math.abs(a[0]-this.corr()[0]);
+        return d<=2?{ok:1,s:100,msg:'¡Cálculo exacto! Estamos GO para el lanzamiento.'}
+          :d<=5?{ok:1,s:65,msg:'Leve error de redondeo. Autorizamos el despegue con ajuste.'}
+          :{ok:0,s:0,msg:'Error de conversión. El viento desestabilizó la nave.'};
+      },
+      fmt(){return `<b>${this.corr()[0]} km/h</b>`;},
+      xpl(){return `<b>Resolución:</b><br>${nudos} nudos × 1.85 = ${(nudos*1.85).toFixed(1)} km/h`;},
+      okMsg:'¡Clima aprobado!', failMsg:'Lanzamiento abortado por clima.',
+      anim(ok,done){
+        if(ok){done();return;}
+        const el=document.getElementById('rocket'),ox=rkt.x;let t=0;
+        const iv=setInterval(()=>{t+=.28;el.style.left=(ox+Math.sin(t*2.2)*6)+'px';if(t>Math.PI*4){clearInterval(iv);el.style.left=ox+'px';done();}},16);
+      },
+      fbCheck(a){
+        if(isNaN(a))return null;
+        const d=Math.abs(a-this.corr()[0]);
+        if(d<=2)return{cls:'fb-ok',txt:'✓ Exacto'};
+        if(d<=5)return{cls:'fb-close',txt:'~ Cerca — revisá el redondeo'};
+        return{cls:'fb-err',txt:'✗ Revisá la fórmula'};
+      }
+    },
+
+    // FASE 2 — Proporcionalidad inversa
+    {
+      badge:'Fase 2 de 5', title:'Límites de Carga Útil',
+      sci:{
+        lbl:'Proporcionalidad Inversa',
+        txt:'Para vencer la gravedad el Ratio (Empuje ÷ Peso) debe estar entre 1.5 y 2.5. Calculá la masa mínima y máxima de carga que podemos llevar.',
+        fml:['Peso (kN) = Empuje ÷ Ratio','Masa (t) = Peso ÷ 9.8']
+      },
+      given:[{l:'Empuje de los motores',v:empuje,u:'kN'},{l:'Gravedad terrestre',v:'9.8',u:'m/s²'}],
+      qs:[{l:'Masa Mínima (Ratio = 2.5) =',u:'t'},{l:'Masa Máxima (Ratio = 1.5) =',u:'t'}],
+      corr(){return [parseFloat(((empuje/2.5)/9.8).toFixed(1)),parseFloat(((empuje/1.5)/9.8).toFixed(1))];},
+      judge(a){
+        if(a[0]>=a[1])return{ok:0,s:0,msg:'Error lógico: la masa mínima no puede ser ≥ a la máxima.'};
+        const[c0,c1]=this.corr();
+        const d=Math.abs(a[0]-c0)+Math.abs(a[1]-c1);
+        return d<=2?{ok:1,s:100,msg:'¡Cálculos exactos! Carga asegurada.'}
+          :d<=5?{ok:1,s:65,msg:'Casi exacto. Ajuste manual realizado.'}
+          :{ok:0,s:0,msg:'Error en la carga. Inestabilidad estructural.'};
+      },
+      fmt(){const[a,b]=this.corr();return `Mín: <b>${a} t</b> | Máx: <b>${b} t</b>`;},
+      xpl(){
+        const p25=empuje/2.5,p15=empuje/1.5;
+        return `<b>Resolución:</b><br>Masa Mín (ratio 2.5): ${empuje}÷2.5=${p25.toFixed(1)} kN ÷9.8=${(p25/9.8).toFixed(1)} t<br>Masa Máx (ratio 1.5): ${empuje}÷1.5=${p15.toFixed(1)} kN ÷9.8=${(p15/9.8).toFixed(1)} t`;
+      },
+      okMsg:'¡Carga confirmada! Encendiendo motores.', failMsg:'Inestabilidad estructural.',
+      anim(ok,done){
+        const W=sw(),H=sh();
+        document.getElementById('pad').style.opacity='0';
+        document.getElementById('fpole').style.opacity='0';
+        flame(true);
+        if(ok)animTo(W/2-12,H*.42,0,2600,()=>{flame(false);done();});
+        else animFail(W*.18,H*.08,1800,()=>{flame(false);done();});
+      },
+      fbCheck(a,i){
+        if(isNaN(a))return null;
+        const c=this.corr()[i];
+        const d=Math.abs(a-c);
+        if(d<=1)return{cls:'fb-ok',txt:'✓ Exacto'};
+        if(d<=2.5)return{cls:'fb-close',txt:'~ Cerca'};
+        return{cls:'fb-err',txt:'✗ Revisá'};
+      }
+    },
+
+    // FASE 3 — Raíz cuadrada / mecánica orbital
+    {
+      badge:'Fase 3 de 5', title:'Velocidad de Escape',
+      sci:{
+        lbl:'Mecánica Orbital',
+        txt:'Para salir de la órbita terrestre la nave debe superar la velocidad de escape, que depende de la distancia al centro de la Tierra. A mayor altitud, menor velocidad de escape.',
+        fml:['v = √(2 × 398.600 ÷ r)','r = Radio Tierra (6.371 km) + Altitud']
+      },
+      given:[{l:'Altitud de órbita actual',v:altitud,u:'km'},{l:'Radio de la Tierra',v:'6.371',u:'km'}],
+      qs:[{l:'Velocidad de escape =',u:'km/s'}],
+      corr(){return [parseFloat(Math.sqrt(2*398600/(6371+altitud)).toFixed(1))];},
+      // Tolerancia: ±0.5 exacto, ±1.2 parcial
+      judge(a){
+        const d=Math.abs(a[0]-this.corr()[0]);
+        return d<=0.5?{ok:1,s:100,msg:'¡Velocidad exacta! Salimos de la órbita terrestre.'}
+          :d<=1.2?{ok:1,s:65,msg:'Velocidad aceptable con corrección manual.'}
+          :{ok:0,s:0,msg:'Velocidad incorrecta. La nave quedó atrapada en órbita.'};
+      },
+      fmt(){return `<b>${this.corr()[0]} km/s</b>`;},
+      xpl(){
+        const r=6371+altitud,i=2*398600/r;
+        return `<b>Resolución:</b><br>r = 6371+${altitud} = ${r} km<br>2×398600÷${r} = ${i.toFixed(1)}<br>√${i.toFixed(1)} = ${Math.sqrt(i).toFixed(1)} km/s`;
+      },
+      okMsg:'¡Rumbo al espacio profundo!', failMsg:'La nave quedó atrapada en órbita.',
+      anim(ok,done){
+        const W=sw(),H=sh();
+        flame(true);
+        if(ok)animTo(W*.6,H*.22,-22,2800,()=>{flame(false);done();});
+        else animFail(W*.65,H*.5,1800,()=>{flame(false);done();});
+      },
+      fbCheck(a){
+        if(isNaN(a))return null;
+        const d=Math.abs(a-this.corr()[0]);
+        if(d<=0.5)return{cls:'fb-ok',txt:'✓ Exacto'};
+        if(d<=1.2)return{cls:'fb-close',txt:'~ Cerca'};
+        return{cls:'fb-err',txt:'✗ Revisá la fórmula'};
+      }
+    },
+
+    // FASE 4 — Proyección astronómica
+    {
+      badge:'Fase 4 de 5', title:'Encuentro Lunar',
+      sci:{
+        lbl:'Proyección Astronómica',
+        txt:'No apuntamos a donde está la Luna ahora — apuntamos a donde ESTARÁ cuando lleguemos. La Luna avanza 13° por día alrededor de la Tierra.',
+        fml:['Avance = 13° / día × días de viaje','Posición llegada = Posición actual + Avance']
+      },
+      given:[{l:'Posición actual de la Luna',v:posLuna,u:'°'},{l:'Velocidad lunar',v:'13',u:'°/día'},{l:'Días de viaje',v:dias,u:'días'}],
+      qs:[{l:'Posición de la Luna al llegar =',u:'°'}],
+      corr(){return [posLuna+13*dias];},
+      // Tolerancia: ±5° exacto, ±12° parcial
+      judge(a){
+        const d=Math.abs(a[0]-this.corr()[0]);
+        return d<=5?{ok:1,s:100,msg:'¡Encuentro perfecto! Llegamos a la Luna.'}
+          :d<=12?{ok:1,s:60,msg:'Corrección ejecutada. Combustible extra gastado.'}
+          :{ok:0,s:0,msg:'Error de navegación. Pasamos de largo.'};
+      },
+      fmt(){return `<b>${this.corr()[0]}°</b>`;},
+      xpl(){return `<b>Resolución:</b><br>Avance = 13×${dias} = ${13*dias}°<br>Posición = ${posLuna}°+${13*dias}° = ${this.corr()[0]}°`;},
+      okMsg:'¡Llegamos a la Luna!', failMsg:'Perdidos en el espacio.',
+      anim(ok,done){
+        const W=sw(),H=sh();
+        flame(true);
+        if(ok){
+          animTo(W*.76,H*.07,-55,3000,()=>{
+            flame(false);
+            const moon=document.getElementById('moon');
+            if(moon)moon.style.filter='drop-shadow(0 0 12px rgba(200,215,230,.7))';
+            let t=0,ox=rkt.x;
+            const iv=setInterval(()=>{
+              t+=.06;const el=document.getElementById('rocket');
+              if(el)el.style.left=(ox+Math.cos(t)*12)+'px';
+            },30);
+            setTimeout(()=>{clearInterval(iv);done();},2000);
+          });
+        } else {
+          animFail(W,H*.05,1800,()=>{flame(false);done();});
+        }
+      },
+      fbCheck(a){
+        if(isNaN(a))return null;
+        const d=Math.abs(a-this.corr()[0]);
+        if(d<=5)return{cls:'fb-ok',txt:'✓ Exacto'};
+        if(d<=12)return{cls:'fb-close',txt:'~ Cerca'};
+        return{cls:'fb-err',txt:'✗ Revisá el cálculo'};
+      }
+    },
+
+    // FASE 5 — Promedio / corredor de reentrada
+    {
+      badge:'Fase 5 de 5', title:'Reentrada Atmosférica',
+      sci:{
+        lbl:'Corredor de Reentrada',
+        txt:'De regreso a la Tierra, debemos entrar por el centro exacto del corredor de reentrada. Ángulo menor: rebotamos en la atmósfera. Ángulo mayor: nos quemamos. El punto medio es la única opción segura.',
+        fml:['Ángulo Objetivo = (Límite Mínimo + Límite Máximo) ÷ 2']
+      },
+      given:[{l:'Ángulo mínimo (riesgo rebote)',v:angMin,u:'°'},{l:'Ángulo máximo (riesgo fuego)',v:angMax,u:'°'}],
+      qs:[{l:'Ángulo objetivo (centro del corredor) =',u:'°'}],
+      corr(){return [parseFloat(((angMin+angMax)/2).toFixed(1))];},
+      // Tolerancia ajustada: ±0.3 exacto, ±0.7 parcial (antes era ±0.1 — demasiado estricto)
+      judge(a){
+        const d=Math.abs(a[0]-this.corr()[0]);
+        return d<=0.3?{ok:1,s:100,msg:'¡Reentrada perfecta! El escudo térmico resistió.'}
+          :d<=0.7?{ok:1,s:60,msg:'Corredor alcanzado con margen mínimo. ¡A salvo!'}
+          :{ok:0,s:0,msg:'Ángulo fatal. El escudo térmico falló.'};
+      },
+      fmt(){return `<b>${this.corr()[0]}°</b>`;},
+      xpl(){
+        const s=angMin+angMax;
+        return `<b>Resolución:</b><br>(${angMin}+${angMax}) ÷ 2 = ${s.toFixed(1)} ÷ 2 = ${(s/2).toFixed(1)}°`;
+      },
+      okMsg:'¡Amerizaje exitoso!', failMsg:'Fallo en el escudo térmico.',
+      anim(ok,done){
+        const W=sw(),H=sh();
+        const moon=document.getElementById('moon');
+        if(moon)moon.style.opacity='0';
+        const el=document.getElementById('rocket');
+        if(ok){
+          if(el)el.style.filter='drop-shadow(0 0 14px rgba(255,110,0,.9))';
+          animTo(W*.44,H*.2,158,2200,()=>{
+            if(el)el.style.filter='none';
+            animTo(W*.44,H*.78,175,1100,()=>done());
+          });
+        } else {
+          if(el)el.style.filter='drop-shadow(0 0 20px rgba(255,40,0,1))';
+          animFail(W*.12,H*.35,1800,()=>{if(el)el.style.filter='none';done();});
+        }
+      },
+      fbCheck(a){
+        if(isNaN(a))return null;
+        const d=Math.abs(a-this.corr()[0]);
+        if(d<=0.3)return{cls:'fb-ok',txt:'✓ Exacto'};
+        if(d<=0.7)return{cls:'fb-close',txt:'~ Cerca — revisá decimales'};
+        return{cls:'fb-err',txt:'✗ Revisá la fórmula'};
+      }
+    }
+  ];
+}
+
+/* ═══ VISTAS ═══ */
+function renderIntro(){
+  document.getElementById('app').innerHTML=`
+    <div class="intro">
+      <svg class="patch" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="ipbg" cx="50%" cy="45%" r="55%"><stop offset="0%" stop-color="#1a1060"/><stop offset="100%" stop-color="#070b14"/></radialGradient>
+          <radialGradient id="imng" cx="38%" cy="32%" r="62%"><stop offset="0%" stop-color="#e8ecef"/><stop offset="100%" stop-color="#9aa0a8"/></radialGradient>
+        </defs>
+        <circle cx="100" cy="100" r="98" fill="url(#ipbg)" stroke="#534AB7" stroke-width="3.5"/>
+        <circle cx="100" cy="100" r="91" fill="none" stroke="#7F77DD" stroke-width="1" opacity=".45"/>
+        <circle cx="28" cy="38" r="1.5" fill="#fff" opacity=".85"/><circle cx="168" cy="52" r="1.2" fill="#fff" opacity=".7"/>
+        <circle cx="42" cy="162" r="1.3" fill="#fff" opacity=".75"/><circle cx="158" cy="158" r="1.5" fill="#fff" opacity=".9"/>
+        <circle cx="18" cy="108" r="1" fill="#fff" opacity=".6"/><circle cx="180" cy="118" r="1.2" fill="#fff" opacity=".8"/>
+        <circle cx="50" cy="150" r="30" fill="#1a5fa8"/>
+        <ellipse cx="44" cy="143" rx="13" ry="8" fill="#2d8a4e"/>
+        <ellipse cx="62" cy="157" rx="10" ry="6" fill="#2d8a4e"/>
+        <circle cx="50" cy="150" r="30" fill="none" stroke="#4db8ff" stroke-width="1.5" opacity=".4"/>
+        <circle cx="150" cy="56" r="24" fill="url(#imng)"/>
+        <circle cx="140" cy="48" r="4.5" fill="#b0b8c0" opacity=".65"/><circle cx="156" cy="66" r="3.5" fill="#b0b8c0" opacity=".55"/>
+        <path d="M 72 138 Q 118 55 134 72" fill="none" stroke="#7F77DD" stroke-width="2.5" stroke-dasharray="5,4" opacity=".75"/>
+        <g transform="translate(104,95) rotate(-42)">
+          <rect x="-5" y="-14" width="10" height="22" rx="5" fill="#dde4ed"/>
+          <polygon points="-5,8 5,8 7,15 -7,15" fill="#534AB7"/>
+          <circle cx="0" cy="-5" r="4" fill="#4db8ff" opacity=".75"/>
+          <polygon points="0,-14 6,-7 -6,-7" fill="#aab5c0"/>
+        </g>
+        <path id="ita" d="M 18,100 A 82,82 0 0,1 182,100" fill="none"/>
+        <text font-family="Orbitron,monospace" font-size="11.5" fill="#7F77DD" font-weight="700" letter-spacing="3.5"><textPath href="#ita" startOffset="8%">ARTEMIS II · NASA · 2026</textPath></text>
+        <path id="itb" d="M 24,108 A 78,78 0 0,0 176,108" fill="none"/>
+        <text font-family="Orbitron,monospace" font-size="9" fill="#534AB7" letter-spacing="2"><textPath href="#itb" startOffset="10%">REGRESO A LA LUNA · MISIÓN TRIPULADA</textPath></text>
+      </svg>
+      <h1>Misión Artemis II</h1>
+      <div class="tagline">Simulador de Dinámica de Vuelo · 2026</div>
+      <div class="brief">
+        <p>La misión <b>Artemis II</b> es el ensayo general antes del gran regreso. Cuatro astronautas orbitan la Luna sin aterrizar — el objetivo es probar en vuelo real cada sistema que, en la próxima misión <b>Artemis III</b>, llevará a humanos a pisar suelo lunar por primera vez desde el Apolo 17 en 1972.</p>
+        <p>Más de <b>50 años</b> después de la última huella humana en la Luna, la humanidad prepara su regreso. Artemis II es el puente entre la historia y lo que viene.</p>
+        <div class="mission-note">
+          <b>Tu rol:</b> Sos el Oficial de Dinámica de Vuelo. Resolvé 5 cálculos críticos que llevarán a la tripulación desde la plataforma de lanzamiento hasta el amerizaje final.<br><br>
+          <b>Sin sliders:</b> Primero calculás en papel, después ejecutás. El resultado de cada animación depende de tus cuentas.
+        </div>
+      </div>
+      <button class="btn" onclick="startGame()">Iniciar Simulación Completa</button>
+    </div>`;
+}
+
+function renderGame(){
+  const ph=phases[cur];
+  const hud=phases.map((_,i)=>`<div class="hud-dot ${i<cur?'done':i===cur?'active':''}"></div>`).join('');
+  document.getElementById('app').innerHTML=`
+    <div class="hud">${hud}</div>
+    <div class="phase-row"><span class="badge">${ph.badge}</span><span class="phase-title">${ph.title}</span></div>
+    <div class="sci"><div class="lbl">${ph.sci.lbl}</div><p>${ph.sci.txt}</p><div class="formula">${ph.sci.fml.map(f=>`<div>${f}</div>`).join('')}</div></div>
+    ${stageHTML()}
+    <div class="inputs">
+      <h3>Datos de Telemetría</h3>
+      ${ph.given.map(g=>`<div class="row"><label>${g.l}</label><input type="text" value="${g.v}" readonly><span class="unit">${g.u}</span></div>`).join('')}
+      <div class="divider"></div>
+      ${ph.qs.map((q,i)=>`
+        <div class="row"><label style="font-weight:600;color:var(--text)">${q.l}</label><input type="text" inputmode="decimal" class="ans" data-i="${i}" placeholder="?"><span class="unit">${q.u}</span></div>
+        <div class="feedback-row" id="fb-${i}"></div>
+      `).join('')}
+    </div>
+    <div class="hint" id="hint">Realizá los cálculos en papel y escribí tus respuestas</div>
+    <div class="reveal" id="reveal"></div>
+    <button class="btn" id="btn">Ejecutar Comando</button>`;
+
+  if(cur===0){const W=sw(),H=sh();rkt={x:W/2-12,y:62,rot:0};}
+  placeRocket(rkt.x,rkt.y,rkt.rot);
+
+  // Feedback en tiempo real al escribir
+  document.querySelectorAll('.ans').forEach(inp=>{
+    inp.addEventListener('input',()=>{
+      const i=parseInt(inp.dataset.i);
+      const v=parseFloat(inp.value.replace(',','.'));
+      const fbEl=document.getElementById(`fb-${i}`);
+      if(isNaN(v)||inp.value.trim()===''){
+        inp.className='ans';
+        if(fbEl)fbEl.innerHTML='';
+        return;
+      }
+      const fb=ph.fbCheck?ph.fbCheck(v,i):null;
+      if(fb&&fbEl){
+        fbEl.innerHTML=`<span class="${fb.cls}">${fb.txt}</span>`;
+        inp.className='ans '+(fb.cls==='fb-ok'?'input-ok':fb.cls==='fb-close'?'input-close':'input-err');
+      }
+      const h=document.getElementById('hint');
+      if(h){h.textContent="Presioná 'Ejecutar Comando' cuando estés listo";h.className='hint';}
+    });
+  });
+
+  document.getElementById('btn').onclick=doLaunch;
+}
+
+function doLaunch(){
+  if(busy)return;
+  const inputs=document.querySelectorAll('.ans');
+  let answers=[],err=false;
+  inputs.forEach(inp=>{
+    const v=parseFloat(inp.value.replace(',','.'));
+    if(isNaN(v))err=true;
+    answers.push(v);
+  });
+  if(err){
+    const h=document.getElementById('hint');
+    h.textContent='Completá todos los campos con números.';h.className='hint err';
+    return;
+  }
+  busy=true;
+  const btn=document.getElementById('btn');
+  btn.disabled=true;btn.textContent='Analizando trayectoria...';
+  const ph=phases[cur];
+  const j=ph.judge(answers);
+  scores.push(j.s);
+  // Guardar para el resumen final
+  answers_log.push({
+    title:ph.title,
+    badge:ph.badge,
+    s:j.s,
+    ok:j.ok,
+    corr:ph.fmt(),
+    yours:answers.map(a=>a).join(' / '),
+    msg:j.msg
+  });
+  ph.anim(j.ok,()=>{
+    showOv(j.ok?(j.s===100?'🎯':'⚠️'):'💥',j.ok?ph.okMsg:ph.failMsg,j.msg);
+    setTimeout(()=>{hideOv();showReveal(ph,j);busy=false;},2800);
+  });
+}
+
+function showReveal(ph,j){
+  const rev=document.getElementById('reveal');
+  const cls=j.s>=85?'ok':j.s>=50?'warn':'fail';
+  rev.className=`reveal ${cls}`;rev.style.display='block';
+  const xpl=j.s<100?`<div class="steps">${ph.xpl()}</div>`:'';
+  rev.innerHTML=`${j.s>=85?'🎯':j.s>=50?'⚠️':'💥'} <b>+${j.s} pts</b> — Respuesta esperada: ${ph.fmt()}.<br>${j.msg}${xpl}`;
+  const btn=document.getElementById('btn');
+  btn.disabled=false;
+  if(cur<phases.length-1){
+    btn.textContent='Siguiente Fase →';
+    btn.onclick=()=>{cur++;renderGame();};
+  } else {
+    btn.textContent='Ver Reporte Final';
+    btn.onclick=renderScore;
+  }
+}
+
+function renderScore(){
+  const total=Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
+  const medal=total>=85?'Misión Histórica':total>=65?'Misión Exitosa':total>=40?'Misión con Turbulencias':'Misión Abortada';
+  const sub=total>=85?'Tus cálculos cubrieron todo el ciclo espacial. La tripulación regresó a salvo.':
+    total>=65?'La misión se completó con algunos contratiempos. ¡Buen trabajo!':
+    total>=40?'La tripulación fue rescatada, pero perdimos la nave. Revisá las fórmulas.':
+    'Fallos críticos impidieron la misión. ¡La ciencia se trata de aprender e intentarlo de nuevo!';
+
+  const phaseNames=['Clima','Carga','Escape','Ventana','Regreso'];
+  const summaryRows=answers_log.map((r,i)=>`
+    <div class="ps-row">
+      <div class="ps-icon">${r.s>=85?'🎯':r.s>=50?'⚠️':'💥'}</div>
+      <div class="ps-body">
+        <div class="ps-header">
+          <span class="ps-phase">${r.title}</span>
+          <span class="ps-pts ${r.s>=85?'ok':r.s>=50?'warn':'fail'}">${r.s} pts</span>
+        </div>
+        <div class="ps-corr">Respuesta correcta: ${r.corr}</div>
+        <div class="ps-your ${r.s>=85?'ok':r.s>=50?'warn':'fail'}">Tu respuesta: ${r.yours}</div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('app').innerHTML=`
+    <div class="score-screen">
+      <div style="font-size:50px;margin-bottom:12px">${total>=85?'🌍':total>=65?'🚀':total>=40?'🛸':'💥'}</div>
+      <div class="score-n">${total}</div>
+      <div class="score-lbl">puntos obtenidos</div>
+      <div class="score-title">${medal}</div>
+      <div class="score-sub">${sub}</div>
+
+      <div class="phases-summary">
+        <div class="ps-title">Revisión completa por fase</div>
+        ${summaryRows}
+      </div>
+
+      <div class="score-grid">
+        ${scores.map((s,i)=>`<div class="sc"><div class="sl">${phaseNames[i]}</div><div class="sv" style="color:${s>=85?'var(--teal)':s>=50?'var(--amber)':'var(--danger)'}">${s}</div></div>`).join('')}
+      </div>
+      <button class="btn-sm" onclick="startGame()">Nueva Simulación</button>
+    </div>`;
+}
+
+function startGame(){
+  buildPhases();cur=0;scores=[];answers_log=[];busy=false;
+  rkt={x:0,y:0,rot:0};
+  renderGame();
+}
+
+renderIntro();
+</script>
+</body>
+</html>
